@@ -27,6 +27,25 @@ npx skills add shaal/skills --list
 npx skills add shaal/skills --skill sol-astra-advisor --agent codex --global
 ```
 
+## Codex statusline
+
+The sanitized Codex footer profile is available at
+[`codex/statusline.config.toml`](codex/statusline.config.toml). It contains
+display preferences only; authentication, history, sessions, and machine
+specific settings stay local.
+
+To use it on a machine:
+
+```sh
+mkdir -p ~/.codex
+ln -sfn "$PWD/codex/statusline.config.toml" \
+  "$HOME/.codex/statusline.config.toml"
+codex --profile statusline
+```
+
+Run those commands from the root of a checkout of this repository, or replace
+`$PWD` with the checkout path.
+
 Omit `--global` to install into the current project. Installation copies skill instructions; model access and tool capabilities come from the agent running them.
 
 ## Available skills
