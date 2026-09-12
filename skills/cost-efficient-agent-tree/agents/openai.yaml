@@ -1,0 +1,4 @@
+interface:
+  display_name: "Cost-Efficient Agent Tree"
+  short_description: "Astra leads, Luna explores, Sol implements"
+  default_prompt: "Use $cost-efficient-agent-tree to configure this project's Astra, Luna, and Sol roles and verify their model settings."

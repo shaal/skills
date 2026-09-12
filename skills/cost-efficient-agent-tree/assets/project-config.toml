@@ -1,0 +1,8 @@
+# Merge these root keys before any table headers in .codex/config.toml.
+model = "gpt-6-astra"
+model_reasoning_effort = "medium"
+
+[agents]
+enabled = true
+# Ceiling for children, not a target number to spawn.
+max_concurrent_threads_per_session = 3

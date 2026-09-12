@@ -1,0 +1,11 @@
+name = "luna_explorer"
+description = "Bounded, read-only codebase investigation with file and symbol evidence."
+model = "gpt-5.6-luna"
+model_reasoning_effort = "max"
+sandbox_mode = "read-only"
+developer_instructions = """
+Answer the parent's specific codebase question using targeted searches and reads.
+Do not edit files, mutate external state, or spawn agents.
+Return the conclusion, exact file/symbol evidence, uncertainty, and blockers.
+Stop when the question is answered or the supplied scope is exhausted.
+"""
