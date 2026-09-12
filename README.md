@@ -52,7 +52,18 @@ Omit `--global` to install into the current project. Installation copies skill i
 
 | Skill | Purpose |
 | --- | --- |
+| [cost-efficient-agent-tree](skills/cost-efficient-agent-tree/SKILL.md) | Astra orchestrates and verifies; Luna explores and researches; Sol implements; optional Astra independent review. Includes project role templates and runtime verification. |
 | [sol-astra-advisor](skills/sol-astra-advisor/SKILL.md) | Sol owns progress, implementation, and verification. Astra provides selective advice for difficult decisions, architectural trade-offs, or independent review. |
+
+### Cost-efficient agent tree
+
+Install with `npx skills add shaal/skills --skill cost-efficient-agent-tree --agent codex --global`, then ask:
+
+```text
+Use $cost-efficient-agent-tree to set up this project's custom agents.
+```
+
+The skill packages Astra medium as root, Luna max for exploration/research, Sol high for implementation, and optional Astra xhigh review. It merges project configuration and assignment rules, then guides fresh-session activation and model/effort verification. Installing the skill alone does not activate the roles. Once configured, invoke it for tasks that benefit from delegation; small tasks do not need the whole tree. Actual usage and savings depend on the work and account.
 
 ### Sol with Astra Advisor
 
