@@ -54,6 +54,8 @@ Omit `--global` to install into the current project. Installation copies skill i
 | --- | --- |
 | [cost-efficient-agent-tree](skills/cost-efficient-agent-tree/SKILL.md) | Astra orchestrates and verifies; Luna explores and researches; Sol implements; optional Astra independent review. Includes project role templates and runtime verification. |
 | [sol-astra-advisor](skills/sol-astra-advisor/SKILL.md) | Sol owns progress, implementation, and verification. Astra provides selective advice for difficult decisions, architectural trade-offs, or independent review. |
+| [ship](skills/ship/SKILL.md) | Completes the next task from a doc or beads backlog, then gates the commit on a 4-axis confidence score (≥95, no axis below 15). |
+| [ship-next](skills/ship-next/SKILL.md) | Unattended driver for `ship`: branches off the current branch, ships one task, then pushes, opens a PR, and squash-merges it. Designed to run in a loop. |
 
 ### Cost-efficient agent tree
 
@@ -70,6 +72,16 @@ The skill packages Astra medium as root, Luna max for exploration/research, Sol 
 Use `$sol-astra-advisor` in a task running on Sol. The skill requires the advisor call to explicitly specify `model: "gpt-6-astra"`, `reasoning_effort: "high"`, and `fork_turns: "none"`. Sol supplies the question, necessary materials, and constraints in a self-contained brief.
 
 Astra provides recommendations, rationale, and risks without editing files, mutating external state, or spawning other agents. Sol continues implementation and verification. Existing approval requirements stay unchanged. If the required model selection or context controls are unavailable, the skill requires disclosure before attempting a consultation or fallback.
+
+### Ship and ship-next (Claude Code)
+
+Install both together, because `ship-next` runs `ship`:
+
+```sh
+npx skills add shaal/skills --skill ship --skill ship-next --agent claude-code --global
+```
+
+Use `/ship` to finish one task with a human approval before the commit. Use `/ship-next` for unattended runs: it needs `git` with an `origin` remote and an authenticated `gh` CLI, and it merges with `gh pr merge --admin`. To drain a whole backlog in a loop, use the [shipyard](https://github.com/shaal/shipyard) CLI (`npm install -g @shaal/shipyard`).
 
 ## Add another skill
 
