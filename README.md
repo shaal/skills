@@ -75,11 +75,19 @@ Astra provides recommendations, rationale, and risks without editing files, muta
 
 ### Ship and ship-next (Claude Code)
 
-Install both together, because `ship-next` runs `ship`:
+Install `ship-next` for unattended runs. It bundles a copy of `ship`, so it works on its own:
+
+```sh
+npx skills add shaal/skills --skill ship-next --agent claude-code --global
+```
+
+Add `ship` too if you also want the manual `/ship` command (it asks before each commit):
 
 ```sh
 npx skills add shaal/skills --skill ship --skill ship-next --agent claude-code --global
 ```
+
+`skills/ship-next/references/ship.md` is a copy of `skills/ship/SKILL.md` without its frontmatter. When `ship` changes, copy it again so both stay the same.
 
 Use `/ship` to finish one task with a human approval before the commit. Use `/ship-next` for unattended runs: it needs `git` with an `origin` remote and an authenticated `gh` CLI, and it merges with `gh pr merge --admin`. To drain a whole backlog in a loop, use the [shipyard](https://github.com/shaal/shipyard) CLI (`npm install -g @shaal/shipyard`).
 
