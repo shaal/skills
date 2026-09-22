@@ -92,7 +92,7 @@ Pick by what you want to do:
 | Work through the whole backlog in a loop | `ship-next` + the [shipyard](https://github.com/shaal/shipyard) CLI | Run `npx --allow-git=all github:shaal/shipyard`. Add a number, such as `5`, to stop after that many tasks. |
 | Not sure yet | Both | Start with `/ship`. Move to `/ship-next` once you trust the gate. |
 
-Both skills work in a git repository. They take the next task from a markdown checklist with `- [ ]` items, or from a beads backlog: `ship` uses [`br`](https://github.com/Dicklesworthstone/beads_rust), while `ship-next` and shipyard use [`bd`](https://github.com/steveyegge/beads). If `ship` finds no task source, it asks you. `ship-next` has no one to ask, so it stops. `ship` commits locally and does not push. `ship-next` also needs:
+Both skills work in a git repository. They take the next task from a markdown checklist with `- [ ]` items, or from a beads backlog. For beads, they read `.beads/metadata.json` to pick the right CLI: a Dolt workspace uses [`bd`](https://github.com/steveyegge/beads), and a SQLite workspace uses [`br`](https://github.com/Dicklesworthstone/beads_rust). If `br` reports `SCHEMA_MISMATCH`, run `br doctor migrate-schema plan` yourself; the skills never migrate a workspace. If `ship` finds no task source, it asks you. `ship-next` has no one to ask, so it stops. `ship` commits locally and does not push. `ship-next` also needs:
 
 1. An `origin` remote on GitHub and the `gh` CLI, logged in (`gh auth status`).
 2. A clean working tree on a branch (not a detached HEAD) that can fast-forward from `origin`.
