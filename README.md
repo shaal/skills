@@ -14,6 +14,8 @@ npx skills add shaal/skills --skill '*' --agent codex --global --yes
 
 Re-run this command when new skills are added to the collection.
 
+The `ship` and `ship-next` skills are written for Claude Code. Install them with the command in [Ship and ship-next](#ship-and-ship-next-claude-code).
+
 To choose skills and agents interactively:
 
 ```sh
@@ -75,21 +77,32 @@ Astra provides recommendations, rationale, and risks without editing files, muta
 
 ### Ship and ship-next (Claude Code)
 
-Install `ship-next` for unattended runs. It bundles a copy of `ship`, so it works on its own:
-
-```sh
-npx skills add shaal/skills --skill ship-next --agent claude-code --global
-```
-
-Add `ship` too if you also want the manual `/ship` command (it asks before each commit):
+These two skills are written for Claude Code. Most people want both. Install them together:
 
 ```sh
 npx skills add shaal/skills --skill ship --skill ship-next --agent claude-code --global
 ```
 
-`skills/ship-next/references/ship.md` is a copy of `skills/ship/SKILL.md` without its frontmatter. When `ship` changes, copy it again so both stay the same.
+Pick by what you want to do:
 
-Use `/ship` to finish one task with a human approval before the commit. Use `/ship-next` for unattended runs: it needs `git` with an `origin` remote and an authenticated `gh` CLI, and it merges with `gh pr merge --admin`. To drain a whole backlog in a loop, use the [shipyard](https://github.com/shaal/shipyard) CLI (`npm install -g @shaal/shipyard`).
+| You want to… | Install | Then |
+| --- | --- | --- |
+| Finish one task and approve the commit yourself | `ship` | Type `/ship` or "ship the next task" |
+| Ship one task with no human: PR opened and merged | `ship-next` | Type `/ship-next` |
+| Work through the whole backlog in a loop | `ship-next` + the [shipyard](https://github.com/shaal/shipyard) CLI | Run `npx --allow-git=all github:shaal/shipyard`. Add a number, such as `5`, to stop after that many tasks. |
+| Not sure yet | Both | Start with `/ship`. Move to `/ship-next` once you trust the gate. |
+
+Both skills work in a git repository. They take the next task from a markdown checklist with `- [ ]` items, or from a beads backlog: `ship` uses [`br`](https://github.com/Dicklesworthstone/beads_rust), while `ship-next` and shipyard use [`bd`](https://github.com/steveyegge/beads). If `ship` finds no task source, it asks you. `ship-next` has no one to ask, so it stops. `ship` commits locally and does not push. `ship-next` also needs:
+
+1. An `origin` remote on GitHub and the `gh` CLI, logged in (`gh auth status`).
+2. A clean working tree on a branch (not a detached HEAD) that can fast-forward from `origin`.
+3. Permission to merge pull requests. It merges with `gh pr merge --admin` and does not wait for CI, so on a protected branch it needs admin rights.
+
+`ship-next` works without `ship`, because it bundles a copy at `skills/ship-next/references/ship.md`. Without `ship`, you lose the mode that asks before each commit and the plain-language trigger ("ship the next task").
+
+The shipyard CLI needs Node.js 18+ and `claude` on your `PATH`. It is not on npm yet, and npm 12+ blocks GitHub packages unless you pass `--allow-git=all`. Skip `shipyard init`. It writes its own copy of `ship` over `~/.claude/skills/ship`, and it adds `~/.claude/commands/ship-next.md`, a second `/ship-next` next to this skill. The loop runs `/ship-next`, and the skill from this repository provides it.
+
+The source of truth for `ship` is [shipyard](https://github.com/shaal/shipyard). To refresh the copies here, run `npm run sync-skills -- <path-to-skills-checkout>` in a shipyard checkout, then open a PR here. Without a path, it uses `$SKILLS_REPO`, else a `skills` directory next to the shipyard checkout. It updates `skills/ship/` and `skills/ship-next/references/ship.md`. `npm run sync-skills:check` reports drift without writing.
 
 ## Add another skill
 
