@@ -11,7 +11,11 @@ merged PR).
 
 Generic by design: it works for a beads project or a markdown-roadmap project.
 A project may override this with its own `ship-next` skill or `.claude/commands/ship-next.md`.
-It depends on the `ship` skill from this collection; install both together.
+
+**Where `/ship` comes from.** This skill runs the `ship` skill's workflow in
+step 5. If a `ship` skill is installed (it appears in your available skills),
+use it. If not, read [references/ship.md](references/ship.md) and follow it as
+the `/ship` skill — it is a bundled copy, so this skill works on its own.
 
 ## The shipping model: branch → PR → merge into the target
 
@@ -127,7 +131,8 @@ drive this task to a *terminal state within this one turn*: either fully shipped
 - If a step genuinely can't finish within the turn, take the **fail path**
   (step 8) cleanly rather than yielding mid-flight.
 
-Invoke the `/ship` skill for the chosen task, with **two overrides**:
+Invoke the `/ship` skill for the chosen task (or follow `references/ship.md` if
+no `ship` skill is installed — see the top of this file), with **two overrides**:
 /ship's Phase 4 normally **holds for a human "go ahead"** and **does not push**.
 There is no human here and we ship via PR, so change *only* those two things —
 nothing else:
