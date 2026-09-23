@@ -1,0 +1,3 @@
+interface:
+  display_name: "Photoreal Demos"
+  short_description: "Photoreal interactive 3D demos with three.js, Blender Cycles, or both"

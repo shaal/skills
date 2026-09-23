@@ -58,6 +58,7 @@ Omit `--global` to install into the current project. Installation copies skill i
 | [sol-astra-advisor](skills/sol-astra-advisor/SKILL.md) | Sol owns progress, implementation, and verification. Astra provides selective advice for difficult decisions, architectural trade-offs, or independent review. |
 | [ship](skills/ship/SKILL.md) | Completes the next task from a doc or beads backlog, then gates the commit on a 4-axis confidence score (≥95, no axis below 15). |
 | [ship-next](skills/ship-next/SKILL.md) | Unattended driver for `ship`: branches off the current branch, ships one task, then pushes, opens a PR, and squash-merges it. Designed to run in a loop. |
+| [photoreal-demos](skills/photoreal-demos/SKILL.md) | Builds photoreal, interactive 3D web demos with three.js, Blender Cycles, or both (Blender bakes, three.js renders). Includes a GPU screenshot harness, a Blender 5.2 relight template, an HDR atlas encoder, a relighting viewer, and two complete example scenes. |
 
 ### Cost-efficient agent tree
 
@@ -103,6 +104,24 @@ Both skills work in a git repository. They take the next task from a markdown ch
 The shipyard CLI needs Node.js 18+ and `claude` on your `PATH`. It is not on npm yet, and npm 12+ blocks GitHub packages unless you pass `--allow-git=all`. Skip `shipyard init`. It writes its own copy of `ship` over `~/.claude/skills/ship`, and it adds `~/.claude/commands/ship-next.md`, a second `/ship-next` next to this skill. The loop runs `/ship-next`, and the skill from this repository provides it.
 
 The source of truth for `ship` is [shipyard](https://github.com/shaal/shipyard). To refresh the copies here, run `npm run sync-skills -- <path-to-skills-checkout>` in a shipyard checkout, then open a PR here. Without a path, it uses `$SKILLS_REPO`, else a `skills` directory next to the shipyard checkout. It updates `skills/ship/` and `skills/ship-next/references/ship.md`. `npm run sync-skills:check` reports drift without writing.
+
+### Photoreal demos
+
+Install for Claude Code (or swap the agent for `codex`):
+
+```sh
+npx skills add shaal/skills --skill photoreal-demos --agent claude-code --global
+```
+
+Then ask for a scene, for example "build a photoreal interactive demo of a lighthouse in a storm", "make a relightable Blender product shot of a perfume bottle", or "make 6 demos, mixing three.js and Blender". The skill picks three.js for scenes that must move freely, Blender Cycles for light-heavy stills (remixed live by light group, time of day, camera view or focus), and a hybrid when both matter. It verifies each page in real Chrome on the GPU, then publishes it (as a Claude artifact when that tool exists, otherwise as a static folder).
+
+Requirements:
+
+1. Python 3.10+ with `playwright`, `numpy`, `opencv-python` and `pillow`, plus `python -m playwright install chromium`. Google Chrome is preferred for screenshots.
+2. A GPU that Chrome's WebGL can use. The screenshot script reports the renderer, so you can confirm it is not a software fallback.
+3. Blender 5.2 or newer, only for Blender and hybrid demos. The template picks Metal, OptiX, CUDA, HIP or oneAPI automatically.
+
+[`skills/photoreal-demos/references/setup.md`](skills/photoreal-demos/references/setup.md) covers installation on macOS, Windows and Linux. For long batches, keep the machine awake on AC power. [`references/batch.md`](skills/photoreal-demos/references/batch.md) explains why.
 
 ## Add another skill
 
