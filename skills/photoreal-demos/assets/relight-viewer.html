@@ -1,0 +1,369 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Relight Viewer</title>
+<!--
+  Relight viewer for path-traced light-group plates (see scripts/encode_hdr_atlas.py).
+  Copy this file next to an assets/ folder that holds manifest.json and v00.webp, v01.webp, ...
+  Edit CONFIG below (title, light labels, default levels and Kelvin, looks), then restyle the page so it fits your subject.
+  Each view is one atlas; dragging sideways cross-fades through the views (an orbit, a time-lapse, a simulation).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital@0;1&family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0e0c0b; --panel: rgba(22, 18, 15, 0.74); --ink: #efe6d6; --dim: rgba(239, 230, 214, 0.62); --faint: rgba(239, 230, 214, 0.36);
+    --line: rgba(239, 230, 214, 0.12); --accent: #e3a55a; --focus: #ffd7a1;
+    --serif: "Libre Caslon Text", Georgia, serif; --sans: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  html, body { height: 100%; margin: 0; background: var(--bg); overflow: hidden; }
+  body { color: var(--ink); font: 14px/1.4 var(--sans); -webkit-font-smoothing: antialiased; }
+  #cv { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: pan-y; cursor: grab; }
+  #cv.drag { cursor: grabbing; }
+  .title { position: fixed; left: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); max-width: min(46ch, calc(100% - 360px)); pointer-events: none; text-shadow: 0 1px 18px rgba(0,0,0,.55); }
+  .title h1 { margin: 0; font: italic 400 clamp(28px, 3.6vw, 44px)/1.02 var(--serif); text-wrap: balance; }
+  .title p { margin: 8px 0 0; font: 400 13px/1.45 var(--sans); color: var(--dim); }
+  .title .exif { margin-top: 10px; font: 400 11px/1 var(--mono); letter-spacing: .06em; color: var(--faint); text-transform: uppercase; font-variant-numeric: tabular-nums; }
+  .hint { position: fixed; left: 50%; top: calc(18px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); font: 500 11px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase;
+    color: var(--dim); background: rgba(14,12,11,.4); border: 1px solid var(--line); padding: 8px 12px; border-radius: 999px; transition: opacity .8s; pointer-events: none; white-space: nowrap; }
+  .hint.fade { opacity: 0; }
+  .desk { position: fixed; right: 16px; top: calc(16px + env(safe-area-inset-top, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: 300px; box-sizing: border-box;
+    display: flex; flex-direction: column; gap: 14px; padding: 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); overflow-y: auto; overscroll-behavior: contain; transition: opacity .35s, transform .35s; }
+  body.desk-off .desk { opacity: 0; pointer-events: none; transform: translateX(12px); }
+  .bar { display: flex; justify-content: space-between; align-items: center; }
+  .desk h2 { margin: 0; font: 600 11px/1 var(--sans); letter-spacing: .16em; text-transform: uppercase; color: var(--faint); }
+  .pill, .looks button, .strip .tog, .strip .solo, #deskOpen { font: 500 11.5px/1 var(--sans); color: var(--dim); background: rgba(239,230,214,.04); border: 1px solid var(--line);
+    border-radius: 999px; padding: 7px 11px; cursor: pointer; }
+  .looks { display: flex; flex-wrap: wrap; gap: 6px; }
+  .looks button[aria-pressed="true"], .strip .tog[aria-pressed="true"] { color: #1b140c; background: var(--ink); border-color: var(--ink); }
+  .strip .solo[aria-pressed="true"] { color: #1b140c; background: var(--accent); border-color: var(--accent); }
+  button:focus-visible, input:focus-visible { outline: 1px solid var(--focus); outline-offset: 2px; }
+  #deskOpen { position: fixed; right: 16px; top: calc(16px + env(safe-area-inset-top, 0px)); background: var(--panel); }
+  .strips { display: grid; gap: 10px; }
+  .strip { display: grid; gap: 8px; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: rgba(0,0,0,.14); transition: opacity .3s; }
+  .strip.off { opacity: .55; }
+  .strip header { display: flex; align-items: center; gap: 8px; }
+  .swatch { width: 12px; height: 12px; border-radius: 50%; flex: none; box-shadow: 0 0 0 1px rgba(255,255,255,.18), 0 0 12px var(--glow, transparent); }
+  .strip .name { font: 600 14px/1 var(--sans); flex: 1; }
+  .strip .tog, .strip .solo { padding: 5px 8px; font-size: 11px; }
+  .row { display: grid; grid-template-columns: 58px 1fr 64px; align-items: center; gap: 8px; }
+  .row label { font: 500 10.5px/1 var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+  .row output { font: 400 11.5px/1 var(--mono); color: var(--dim); text-align: right; font-variant-numeric: tabular-nums; }
+  input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 20px; margin: 0; background: transparent; cursor: pointer; }
+  input[type=range]::-webkit-slider-runnable-track { height: 3px; border-radius: 3px; background: var(--track, linear-gradient(90deg, var(--dim) var(--p, 50%), var(--line) var(--p, 50%))); }
+  input[type=range]::-moz-range-track { height: 3px; border-radius: 3px; background: var(--track, var(--line)); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; margin-top: -5px; border-radius: 50%; background: var(--ink); }
+  input[type=range]::-moz-range-thumb { width: 13px; height: 13px; border-radius: 50%; background: var(--ink); border: 0; }
+  input.kelvin { --track: linear-gradient(90deg, #ff8a2a, #ffb46b 18%, #ffd9ae 38%, #fff4e6 55%, #e6ecff 75%, #b9ccff); }
+  .credit { margin-top: auto; font: 400 11px/1.5 var(--mono); color: var(--faint); }
+  #veil { position: fixed; inset: 0; display: grid; place-items: center; background: var(--bg); z-index: 5; transition: opacity 1s; }
+  #veil.gone { opacity: 0; pointer-events: none; }
+  #veil div { font: italic 400 22px/1.3 var(--serif); color: var(--dim); text-align: center; padding: 0 24px; }
+  #veil small { display: block; margin-top: 10px; font: 400 11px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+  @media (max-width: 760px) {
+    .desk { top: auto; left: 12px; right: 12px; width: auto; max-height: 44vh; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); padding: 12px; gap: 10px; }
+    .title { top: calc(16px + env(safe-area-inset-top, 0px)); bottom: auto; left: 16px; max-width: calc(100% - 32px); }
+    .title p, .credit { display: none; }
+    .hint { top: auto; bottom: calc(44vh + 26px + env(safe-area-inset-bottom, 0px)); }
+  }
+  @media (prefers-reduced-motion: reduce) { .hint, #veil, .desk { transition: none; } }
+</style>
+
+<canvas id="cv" aria-label="Path-traced scene. Drag sideways to change the view."></canvas>
+<div id="veil"><div>Developing the plates…<small id="veilMsg">Loading light passes</small></div></div>
+<div class="hint" id="hint">Drag to move around the scene</div>
+<div class="title"><h1 id="t1"></h1><p id="t2"></p><div class="exif" id="exif"></div></div>
+<button id="deskOpen" hidden>Lights</button>
+<aside class="desk" aria-label="Lighting desk">
+  <div class="bar"><h2>Looks</h2><button class="pill" id="deskClose" title="Hide (H)">Hide</button></div>
+  <div class="looks" id="looks"></div>
+  <h2>Lights</h2>
+  <div class="strips" id="strips"></div>
+  <div class="row"><label for="exp">Exposure</label><input id="exp" type="range" min="-4" max="4" step="0.05" value="0"><output id="expV"></output></div>
+  <div class="credit" id="credit"></div>
+</aside>
+
+<script>
+/* ============================================================ CONFIG: edit for your scene */
+const CONFIG = {
+  title: 'Still Life in Amber',
+  subtitle: 'Path traced in Blender Cycles, relit here in real time. Every light was rendered on its own, so any mix you set is physically exact.',
+  credit: 'Blender Cycles · OIDN per light group · HDR WebP atlases',
+  hint: 'Drag to move around the table',
+  viewLabel: (t) => `orbit ${t >= 0.5 ? '+' : '−'}${Math.abs((t - 0.5) * 56).toFixed(0)}°`,  // t = 0..1 across the views
+  focusX: 0.47,        // horizontal focus (0..1) kept in frame when a tall screen crops the plate
+  exposureScale: 0.62, // base exposure before the EV slider
+  // one entry per pass name in manifest.json; unknown passes get defaults
+  lights: {
+    sun:     { label: 'Window sun', kelvin: 4600, level: 1.0 },
+    sky:     { label: 'Sky fill',   kelvin: 7600, level: 0.8 },
+    candle:  { label: 'Candle',     kelvin: 1900, level: 0.35, flicker: true },
+    pendant: { label: 'Pendant',    kelvin: 2700, level: 0.0 },
+  },
+  looks: {
+    'Late sun':  { ev: 0.0,  sun: [1.0, 4600], sky: [0.8, 7600],   candle: [0.35, 1900], pendant: [0.0, 2700] },
+    'Golden':    { ev: 0.35, sun: [1.35, 3000], sky: [0.35, 9000], candle: [0.6, 1850],  pendant: [0.0, 2700] },
+    'Candlelit': { ev: 0.9,  sun: [0.0, 3000], sky: [0.07, 12000], candle: [1.25, 2150], pendant: [0.0, 2700] },
+    'Studio':    { ev: -0.3, sun: [0.55, 5600], sky: [1.2, 6500],  candle: [0.15, 1900], pendant: [0.35, 5600] },
+  },
+};
+/* ============================================================ viewer */
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const cv = $('cv');
+  const gl = cv.getContext('webgl2', { antialias: false, alpha: false });
+  if (!gl) { $('veil').firstElementChild.innerHTML = 'This page needs WebGL 2.<small>Open it in a current Chrome, Safari, Edge or Firefox</small>'; return; }
+  const hdrOK = !!(gl.getExtension('EXT_color_buffer_float') || gl.getExtension('EXT_color_buffer_half_float'));
+  $('t1').textContent = CONFIG.title; $('t2').textContent = CONFIG.subtitle; $('credit').textContent = CONFIG.credit; $('hint').textContent = CONFIG.hint;
+  document.title = CONFIG.title;
+  const MAXP = 8;
+  let M = null, P = [];  // manifest, pass list
+  const S = { ev: 0, solo: -1, on: [], w: [], k: [] }, target = { ev: 0, w: [], k: [] };
+
+  function kelvin(K) {  // blackbody fit, normalised to unit luminance so Kelvin changes hue, not brightness
+    const t = K / 100; let r, g, b;
+    r = t <= 66 ? 255 : 329.698727446 * Math.pow(t - 60, -0.1332047592);
+    g = t <= 66 ? 99.4708025861 * Math.log(t) - 161.1195681661 : 288.1221695283 * Math.pow(t - 60, -0.0755148492);
+    b = t >= 66 ? 255 : t <= 19 ? 0 : 138.5177312231 * Math.log(t - 10) - 305.0447927307;
+    const c = [r, g, b].map((v) => Math.pow(Math.min(255, Math.max(0, v)) / 255, 2.2));
+    const L = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    return c.map((v) => v / L);
+  }
+  const swatch = (K) => { const c = kelvin(K), m = Math.max(...c); return `rgb(${c.map((v) => Math.round(255 * Math.pow(v / m, 1 / 2.2))).join(',')})`; };
+
+  function buildUi() {
+    P.forEach((id, i) => {
+      const L = CONFIG.lights[id] || { label: id, kelvin: 6500, level: 1 };
+      S.on[i] = true; S.w[i] = target.w[i] = L.level; S.k[i] = target.k[i] = L.kelvin;
+      const el = document.createElement('section'); el.className = 'strip'; el.id = `strip-${i}`;
+      el.innerHTML = `<header><span class="swatch" id="sw-${i}"></span><span class="name">${L.label}</span>
+        <button class="solo" id="solo-${i}" aria-pressed="false">Solo</button><button class="tog" id="on-${i}" aria-pressed="true">On</button></header>
+        <div class="row"><label for="w-${i}">Level</label><input id="w-${i}" type="range" min="0" max="2.5" step="0.01"><output id="wv-${i}"></output></div>
+        <div class="row"><label for="k-${i}">Colour</label><input class="kelvin" id="k-${i}" type="range" min="1700" max="12000" step="50"><output id="kv-${i}"></output></div>`;
+      $('strips').appendChild(el);
+      $(`w-${i}`).addEventListener('input', (e) => { target.w[i] = S.w[i] = +e.target.value; clearLook(); sync(); });
+      $(`k-${i}`).addEventListener('input', (e) => { target.k[i] = S.k[i] = +e.target.value; clearLook(); sync(); });
+      $(`on-${i}`).addEventListener('click', () => { S.on[i] = !S.on[i]; sync(); });
+      $(`solo-${i}`).addEventListener('click', () => { S.solo = S.solo === i ? -1 : i; sync(); });
+    });
+    Object.keys(CONFIG.looks).forEach((name) => {
+      const b = document.createElement('button'); b.textContent = name; b.setAttribute('aria-pressed', 'false');
+      b.addEventListener('click', () => applyLook(name)); $('looks').appendChild(b);
+    });
+  }
+  function clearLook() { $('looks').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', 'false')); }
+  function applyLook(name) {
+    const L = CONFIG.looks[name]; target.ev = L.ev || 0;
+    P.forEach((id, i) => { if (L[id]) { target.w[i] = L[id][0]; target.k[i] = L[id][1]; } S.on[i] = true; });
+    S.solo = -1;
+    $('looks').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.textContent === name)));
+    sync(true);
+  }
+  function sync(fromTarget) {
+    P.forEach((_, i) => {
+      const w = fromTarget ? target.w[i] : S.w[i], k = fromTarget ? target.k[i] : S.k[i];
+      const wi = $(`w-${i}`), ki = $(`k-${i}`);
+      if (document.activeElement !== wi) wi.value = w;
+      if (document.activeElement !== ki) ki.value = k;
+      wi.style.setProperty('--p', `${w / 2.5 * 100}%`);
+      $(`wv-${i}`).textContent = w < 0.005 ? 'off' : `×${w.toFixed(2)}`;
+      $(`kv-${i}`).textContent = `${Math.round(k / 50) * 50} K`;
+      const sw = $(`sw-${i}`); sw.style.background = swatch(k); sw.style.setProperty('--glow', S.on[i] && w > 0.02 ? swatch(k) : 'transparent');
+      $(`on-${i}`).setAttribute('aria-pressed', String(S.on[i])); $(`on-${i}`).textContent = S.on[i] ? 'On' : 'Off';
+      $(`solo-${i}`).setAttribute('aria-pressed', String(S.solo === i));
+      $(`strip-${i}`).classList.toggle('off', !S.on[i] || (S.solo >= 0 && S.solo !== i));
+    });
+    const ev = fromTarget ? target.ev : S.ev;
+    if (document.activeElement !== $('exp')) $('exp').value = ev;
+    $('exp').style.setProperty('--p', `${(ev + 4) / 8 * 100}%`);
+    $('expV').textContent = `${ev > 0.004 ? '+' : ev < -0.004 ? '−' : '±'}${Math.abs(ev).toFixed(1)} EV`;
+  }
+  $('exp').addEventListener('input', (e) => { target.ev = S.ev = +e.target.value; clearLook(); sync(); });
+  const toggleDesk = () => { const off = document.body.classList.toggle('desk-off'); $('deskOpen').hidden = !off; };
+  $('deskClose').addEventListener('click', toggleDesk); $('deskOpen').addEventListener('click', toggleDesk);
+  addEventListener('keydown', (e) => { if ((e.key === 'h' || e.key === 'H') && !(e.target instanceof HTMLInputElement)) toggleDesk(); });
+
+  /* ---------------------------------------------------------- GL */
+  const VS = `#version 300 es
+    in vec2 p; out vec2 vUv; void main() { vUv = p * 0.5 + 0.5; gl_Position = vec4(p, 0.0, 1.0); }`;
+  function prog(fs) {
+    const mk = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+    const p = gl.createProgram(); gl.attachShader(p, mk(gl.VERTEX_SHADER, VS)); gl.attachShader(p, mk(gl.FRAGMENT_SHADER, fs));
+    gl.bindAttribLocation(p, 0, 'p'); gl.linkProgram(p); if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+    const u = {}; const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+    for (let i = 0; i < n; i++) { const info = gl.getActiveUniform(p, i); u[info.name.replace('[0]', '')] = gl.getUniformLocation(p, info.name); }
+    return { p, u };
+  }
+  const quad = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  function target2D(w, h, hdr) {
+    const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+    if (hdr) gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.HALF_FLOAT, null);
+    else gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    [gl.TEXTURE_MIN_FILTER, gl.TEXTURE_MAG_FILTER].forEach((k) => gl.texParameteri(gl.TEXTURE_2D, k, gl.LINEAR));
+    [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T].forEach((k) => gl.texParameteri(gl.TEXTURE_2D, k, gl.CLAMP_TO_EDGE));
+    const fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
+    return { t, fb, w, h };
+  }
+  // Mix: decode each pass tile, weight it by level x colour, cross-fade two neighbouring views.
+  const MIX = prog(`#version 300 es
+    precision highp float; in vec2 vUv; out vec4 o;
+    uniform sampler2D uA, uB; uniform float uMix, uS[${MAXP}]; uniform vec3 uW[${MAXP}]; uniform int uN; uniform vec2 uGrid, uUvScale, uUvOff, uTexel; uniform float uY0;
+    vec3 dec(vec3 v, float s) { vec3 y = pow(v, vec3(2.2)); return s * y / max(1.0 - y, vec3(1.0 / 128.0)); }
+    vec3 look(sampler2D t, vec2 uv) {
+      vec2 q = clamp(vec2(uv.x, 1.0 - uv.y), uTexel, 1.0 - uTexel);
+      vec3 c = vec3(0.0);
+      for (int i = 0; i < ${MAXP}; i++) {
+        if (i >= uN) break;
+        vec2 tile = vec2(float(i % int(uGrid.x)), float(i / int(uGrid.x)));
+        c += uW[i] * dec(texture(t, (tile + q) / uGrid).rgb, uS[i]);
+      }
+      return c;
+    }
+    void main() {
+      vec2 uv = vec2(vUv.x, (vUv.y - uY0) / (1.0 - uY0)) * uUvScale + uUvOff;
+      vec3 a = look(uA, uv);
+      o = vec4(uMix > 0.001 ? mix(a, look(uB, uv), uMix) : a, 1.0);
+    }`);
+  const BRIGHT = prog(`#version 300 es
+    precision highp float; in vec2 vUv; out vec4 o; uniform sampler2D uIn; uniform vec2 uTexel;
+    void main() { vec3 c = vec3(0.0);
+      for (int j = -1; j <= 1; j += 2) for (int i = -1; i <= 1; i += 2) c += texture(uIn, vUv + vec2(i, j) * uTexel).rgb;
+      c *= 0.25; float l = max(max(c.r, c.g), c.b); o = vec4(c * max(l - 1.1, 0.0) / max(l, 1e-4), 1.0); }`);
+  const BLUR = prog(`#version 300 es
+    precision highp float; in vec2 vUv; out vec4 o; uniform sampler2D uIn; uniform vec2 uDir;
+    void main() { float w[5] = float[](0.227, 0.1946, 0.1216, 0.054, 0.0162); vec3 c = texture(uIn, vUv).rgb * w[0];
+      for (int i = 1; i < 5; i++) { c += texture(uIn, vUv + uDir * float(i)).rgb * w[i]; c += texture(uIn, vUv - uDir * float(i)).rgb * w[i]; }
+      o = vec4(c, 1.0); }`);
+  const FINAL = prog(`#version 300 es
+    precision highp float; in vec2 vUv; out vec4 o; uniform sampler2D uIn, uBloom; uniform float uExp, uBloomK, uTime; uniform vec2 uRes;
+    vec3 aces(vec3 x) { return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
+    float hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+    void main() {
+      vec3 c = aces((texture(uIn, vUv).rgb + texture(uBloom, vUv).rgb * uBloomK) * uExp);
+      vec2 d = vUv - 0.5; c *= mix(1.0, smoothstep(0.95, 0.25, length(d * vec2(1.0, 1.1))), 0.35);
+      c = mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, c));
+      o = vec4(c + (hash(vUv * uRes + fract(uTime) * 419.0) - 0.5) * 0.02, 1.0);
+    }`);
+
+  /* ---------------------------------------------------------- plates: keep a few views on the GPU, decode the rest on demand */
+  const imgs = [], cache = new Map(), CAP = matchMedia('(pointer: coarse)').matches ? 4 : 8;
+  function texFor(i) {
+    const hit = cache.get(i); if (hit) { hit.used = performance.now(); return hit.t; }
+    const im = imgs[i]; if (!im || !im.ready) return null;
+    const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, im.el);
+    [gl.TEXTURE_MIN_FILTER, gl.TEXTURE_MAG_FILTER].forEach((k) => gl.texParameteri(gl.TEXTURE_2D, k, gl.LINEAR));
+    [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T].forEach((k) => gl.texParameteri(gl.TEXTURE_2D, k, gl.CLAMP_TO_EDGE));
+    cache.set(i, { t, used: performance.now() });
+    if (cache.size > CAP) { let ok = -1, ot = Infinity; cache.forEach((v, k) => { if (v.used < ot && k !== i) { ot = v.used; ok = k; } }); gl.deleteTexture(cache.get(ok).t); cache.delete(ok); }
+    return t;
+  }
+  const nearestReady = (i) => { for (let d = 0; d < M.views; d++) for (const j of [i - d, i + d]) if (j >= 0 && j < M.views && imgs[j] && imgs[j].ready) return j; return -1; };
+  async function load() {
+    M = await (await fetch('assets/manifest.json')).json();
+    P = M.passes.slice(0, MAXP); M.cols = M.cols || 2; M.rows = M.rows || Math.ceil(P.length / M.cols);
+    if (M.passes.length > MAXP) console.warn(`relight viewer: showing ${MAXP} of ${M.passes.length} light groups`);
+    const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+    if (Math.max(M.width * M.cols, M.height * M.rows) > maxTex)
+      throw new Error(`atlas ${M.width * M.cols}x${M.height * M.rows} exceeds this GPU's ${maxTex}px texture limit; re-encode with --max-width`);
+    buildUi(); const first = Object.keys(CONFIG.looks)[0]; if (first) applyLook(first); else sync(true);
+    const mid = (M.views - 1) >> 1, order = [mid];
+    for (let d = 1; d < M.views; d++) { if (mid - d >= 0) order.push(mid - d); if (mid + d < M.views) order.push(mid + d); }
+    const one = (i) => new Promise((res) => {
+      const el = new Image(); el.decoding = 'async';
+      el.onload = async () => { try { await el.decode(); } catch (e) {} imgs[i] = { el, ready: true }; res(); };
+      el.onerror = () => { imgs[i] = { el, ready: false }; res(); };
+      el.src = `assets/v${String(i).padStart(2, '0')}.webp`;
+    });
+    await one(order[0]); view.pos = view.goal = mid; $('veil').classList.add('gone');
+    for (let k = 1; k < order.length; k += 3) await Promise.all(order.slice(k, k + 3).map(one));
+  }
+
+  /* ---------------------------------------------------------- drag through the views */
+  const view = { pos: 0, goal: 0, vel: 0 };
+  let dragging = false, lastX = 0, lastT = 0;
+  cv.addEventListener('pointerdown', (e) => { dragging = true; lastX = e.clientX; lastT = performance.now(); cv.setPointerCapture(e.pointerId); cv.classList.add('drag'); view.vel = 0; });
+  cv.addEventListener('pointermove', (e) => {
+    if (!dragging || !M || M.views < 2) return;
+    const dx = e.clientX - lastX, now = performance.now(); lastX = e.clientX;
+    const dv = -dx / Math.max(320, innerWidth * 0.55) * (M.views - 1);
+    view.goal = Math.min(M.views - 1, Math.max(0, view.goal + dv)); view.vel = dv / Math.max(1, now - lastT) * 16; lastT = now;
+    if (Math.abs(dx) > 2) $('hint').classList.add('fade');
+  });
+  const up = () => { dragging = false; cv.classList.remove('drag'); };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  cv.addEventListener('wheel', (e) => { if (!M) return; e.preventDefault(); view.goal = Math.min(M.views - 1, Math.max(0, view.goal + (e.deltaX || e.deltaY) * 0.01)); }, { passive: false });
+  addEventListener('keydown', (e) => {
+    if (!M || e.target instanceof HTMLInputElement) return;
+    if (e.key === 'ArrowLeft') view.goal = Math.max(0, Math.round(view.goal) - 1);
+    if (e.key === 'ArrowRight') view.goal = Math.min(M.views - 1, Math.round(view.goal) + 1);
+  });
+
+  let W = 0, H = 0, hdr, half, blurA, blurB;
+  function resize() {
+    const dpr = Math.min(devicePixelRatio || 1, 2); W = Math.round(innerWidth * dpr); H = Math.round(innerHeight * dpr); cv.width = W; cv.height = H;
+    hdr = target2D(W, H, hdrOK); half = target2D(W >> 2, H >> 2, hdrOK); blurA = target2D(W >> 2, H >> 2, hdrOK); blurB = target2D(W >> 2, H >> 2, hdrOK);
+  }
+  addEventListener('resize', resize); resize();
+  const draw = (fb, w, h) => { gl.bindFramebuffer(gl.FRAMEBUFFER, fb); gl.viewport(0, 0, w, h); gl.drawArrays(gl.TRIANGLES, 0, 3); };
+  const flickerAt = (t) => 0.9 + 0.05 * Math.sin(t * 7.3) + 0.035 * Math.sin(t * 13.1 + 1.3) + 0.03 * Math.sin(t * 23.7 + 0.4) + 0.025 * Math.sin(t * 2.1) - 1.2 * Math.max(0, Math.sin(t * 0.61) - 0.93);
+  const t0 = performance.now(); let last = t0;
+  function frame(now) {
+    requestAnimationFrame(frame);
+    const dt = Math.min(0.05, (now - last) / 1000); last = now; const t = (now - t0) / 1000;
+    if (!M) return;
+    const a = 1 - Math.exp(-dt * 4);
+    S.ev += (target.ev - S.ev) * a;
+    P.forEach((_, i) => { S.w[i] += (target.w[i] - S.w[i]) * a; S.k[i] += (target.k[i] - S.k[i]) * a; });
+    if (!dragging) { view.goal = Math.min(M.views - 1, Math.max(0, view.goal + view.vel)); view.vel *= Math.pow(0.02, dt); }
+    view.pos += (view.goal - view.pos) * (1 - Math.exp(-dt * 10));
+    const i0 = Math.floor(view.pos), f = view.pos - i0;
+    const a0 = nearestReady(i0), a1 = nearestReady(Math.min(M.views - 1, i0 + 1));
+    const tA = a0 >= 0 ? texFor(a0) : null; if (!tA) return;
+    const tB = a1 >= 0 && a1 !== a0 ? texFor(a1) : null;
+    for (let k = -2; k <= 3; k++) { const j = i0 + k; if (k > 1 || k < 0) if (j >= 0 && j < M.views && imgs[j] && imgs[j].ready && !cache.has(j)) { texFor(j); break; } }
+    const blend = tB ? Math.min(1, Math.max(0, (f - 0.5) * 2.2 + 0.5)) : 0;  // short double exposure between views
+    gl.useProgram(MIX.p);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tA); gl.uniform1i(MIX.u.uA, 0);
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, tB || tA); gl.uniform1i(MIX.u.uB, 1);
+    gl.uniform1f(MIX.u.uMix, blend); gl.uniform1i(MIX.u.uN, P.length); gl.uniform2f(MIX.u.uGrid, M.cols, M.rows);
+    const ws = new Float32Array(MAXP * 3), ss = new Float32Array(MAXP);
+    P.forEach((id, i) => {
+      const on = S.on[i] && (S.solo < 0 || S.solo === i), c = kelvin(S.k[i]);
+      const w = on ? S.w[i] * ((CONFIG.lights[id] || {}).flicker ? flickerAt(t + i) : 1) : 0;
+      ws.set([c[0] * w, c[1] * w, c[2] * w], i * 3); ss[i] = M.scales[id];
+    });
+    gl.uniform3fv(MIX.u.uW, ws); gl.uniform1fv(MIX.u.uS, ss);
+    const y0 = innerWidth <= 760 ? 0.4 : 0;  // on phones the desk is a bottom sheet; fit the plate above it
+    const ia = M.width / M.height, sa = W / (H * (1 - y0));
+    let sx = 1, sy = 1; if (sa > ia) sy = ia / sa; else sx = sa / ia;
+    const cx = sa < ia ? CONFIG.focusX : 0.5;
+    gl.uniform1f(MIX.u.uY0, y0); gl.uniform2f(MIX.u.uUvScale, sx, sy);
+    gl.uniform2f(MIX.u.uUvOff, Math.min(1 - sx, Math.max(0, cx - sx / 2)), (1 - sy) / 2);
+    gl.uniform2f(MIX.u.uTexel, 0.5 / M.width, 0.5 / M.height);
+    draw(hdr.fb, W, H);
+    gl.useProgram(BRIGHT.p); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, hdr.t); gl.uniform1i(BRIGHT.u.uIn, 0); gl.uniform2f(BRIGHT.u.uTexel, 1 / W, 1 / H);
+    draw(half.fb, half.w, half.h);
+    gl.useProgram(BLUR.p); gl.uniform1i(BLUR.u.uIn, 0);
+    for (let pass = 0; pass < 2; pass++) {
+      const r = pass ? 2.2 : 1.0;
+      gl.bindTexture(gl.TEXTURE_2D, pass ? blurB.t : half.t); gl.uniform2f(BLUR.u.uDir, r / half.w, 0); draw(blurA.fb, half.w, half.h);
+      gl.bindTexture(gl.TEXTURE_2D, blurA.t); gl.uniform2f(BLUR.u.uDir, 0, r / half.h); draw(blurB.fb, half.w, half.h);
+    }
+    gl.useProgram(FINAL.p);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, hdr.t); gl.uniform1i(FINAL.u.uIn, 0);
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, blurB.t); gl.uniform1i(FINAL.u.uBloom, 1);
+    gl.uniform1f(FINAL.u.uExp, Math.pow(2, S.ev) * CONFIG.exposureScale); gl.uniform1f(FINAL.u.uBloomK, hdrOK ? 0.35 : 0.0);
+    gl.uniform1f(FINAL.u.uTime, t); gl.uniform2f(FINAL.u.uRes, W, H);
+    draw(null, W, H);
+    $('exif').textContent = M.views > 1 ? CONFIG.viewLabel(view.pos / (M.views - 1)) : '';
+  }
+  load().catch((e) => { $('veilMsg').textContent = 'Could not load the plates: ' + e.message; });
+  requestAnimationFrame(frame);
+  window.__relight = { S, target, view, applyLook };
+})();
+</script>
