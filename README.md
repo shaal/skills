@@ -26,7 +26,7 @@ To list available skills or install just one:
 
 ```sh
 npx skills add shaal/skills --list
-npx skills add shaal/skills --skill sol-astra-advisor --agent codex --global
+npx skills add shaal/skills --skill astra-advisor --agent codex --global
 ```
 
 ## Codex statusline
@@ -55,7 +55,7 @@ Omit `--global` to install into the current project. Installation copies skill i
 | Skill | Purpose |
 | --- | --- |
 | [cost-efficient-agent-tree](skills/cost-efficient-agent-tree/SKILL.md) | Astra orchestrates and verifies; Luna explores and researches; Sol implements; optional Astra independent review. Includes project role templates and runtime verification. |
-| [sol-astra-advisor](skills/sol-astra-advisor/SKILL.md) | Sol owns progress, implementation, and verification. Astra provides selective advice for difficult decisions, architectural trade-offs, or independent review. |
+| [astra-advisor](skills/astra-advisor/SKILL.md) | Luna, Terra, Sol, or another lead model owns the task. Astra provides selective advice for difficult decisions, stalled investigations, architectural trade-offs, or independent review. |
 | [ship](skills/ship/SKILL.md) | Completes the next task from a doc or beads backlog, then gates the commit on a 4-axis confidence score (≥95, no axis below 15). |
 | [ship-next](skills/ship-next/SKILL.md) | Unattended driver for `ship`: branches off the current branch, ships one task, then pushes, opens a PR, and squash-merges it. Designed to run in a loop. |
 | [photoreal-demos](skills/photoreal-demos/SKILL.md) | Builds photoreal, interactive 3D web demos with three.js, Blender Cycles, or both (Blender bakes, three.js renders). Includes a GPU screenshot harness, a Blender 5.2 relight template, an HDR atlas encoder, a relighting viewer, and two complete example scenes. |
@@ -70,11 +70,15 @@ Use $cost-efficient-agent-tree to set up this project's custom agents.
 
 The skill packages Astra medium as root, Luna max for exploration/research, Sol high for implementation, and optional Astra xhigh review. It merges project configuration and assignment rules, then guides fresh-session activation and model/effort verification. Installing the skill alone does not activate the roles. Once configured, invoke it for tasks that benefit from delegation; small tasks do not need the whole tree. Actual usage and savings depend on the work and account.
 
-### Sol with Astra Advisor
+### Astra Advisor
 
-Use `$sol-astra-advisor` in a task running on Sol. The skill requires the advisor call to explicitly specify `model: "gpt-6-astra"`, `reasoning_effort: "high"`, and `fork_turns: "none"`. Sol supplies the question, necessary materials, and constraints in a self-contained brief.
+Use `$astra-advisor` in a task running on Luna, Terra, Sol, or another lead model. The skill does not depend on a particular caller model ID or version. The lead supplies a focused question, necessary materials, and constraints in a self-contained brief. Consult when a difficult decision, stalled investigation, or independent review merits it; routine work does not need an advisor.
 
-Astra provides recommendations, rationale, and risks without editing files, mutating external state, or spawning other agents. Sol continues implementation and verification. Existing approval requirements stay unchanged. If the required model selection or context controls are unavailable, the skill requires disclosure before attempting a consultation or fallback.
+For the documented `collaboration.spawn_agent` interface, the advisor call explicitly specifies `model: "gpt-6-astra"`, `reasoning_effort: "high"`, and `fork_turns: "none"`. Other hosts must expose documented equivalents, including an available Astra model. Installing the skill alone does not provide model access or delegation capabilities. If the requirements are unavailable or a call fails, disclose the limitation and continue useful independent work; never silently substitute another model.
+
+Astra provides recommendations, rationale, alternatives, and risks without editing files, mutating external state, or spawning other agents. The lead checks the advice against evidence, implements changes, and verifies results. Existing approval requirements stay unchanged. A separate opinion is useful evidence to assess, not proof of correctness.
+
+**Renamed from `sol-astra-advisor`:** Install `astra-advisor` with the command above, update saved prompts to `$astra-advisor`, and remove the old installed skill through your skill manager after the new one is available. Existing installations are not automatically renamed. The old name and repository path are no longer provided as a second skill, to avoid duplicate discovery and diverging instructions.
 
 ### Ship and ship-next (Claude Code)
 
@@ -129,7 +133,7 @@ Create a directory under `skills/` with a unique lowercase, hyphenated name:
 
 ```text
 skills/
-  sol-astra-advisor/
+  astra-advisor/
     SKILL.md
     agents/openai.yaml
   another-skill/
