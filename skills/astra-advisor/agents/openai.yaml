@@ -1,0 +1,4 @@
+interface:
+  display_name: "Astra Advisor"
+  short_description: "Selective Astra advice while the lead owns the task"
+  default_prompt: "Use $astra-advisor to get focused Astra advice on this task, then evaluate the advice and continue implementation and verification."
