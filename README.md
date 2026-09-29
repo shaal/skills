@@ -59,6 +59,7 @@ Omit `--global` to install into the current project. Installation copies skill i
 | [ship](skills/ship/SKILL.md) | Completes the next task from a doc or beads backlog, then gates the commit on a 4-axis confidence score (≥95, no axis below 15). |
 | [ship-next](skills/ship-next/SKILL.md) | Unattended driver for `ship`: branches off the current branch, ships one task, then pushes, opens a PR, and squash-merges it. Designed to run in a loop. |
 | [photoreal-demos](skills/photoreal-demos/SKILL.md) | Builds photoreal, interactive 3D web demos with three.js, Blender Cycles, or both (Blender bakes, three.js renders). Includes a GPU screenshot harness, a Blender 5.2 relight template, an HDR atlas encoder, a relighting viewer, and two complete example scenes. |
+| [grok](skills/grok/SKILL.md) | Asks Grok for a second opinion or an independent review from the shell (`grok -p`), then weighs its answer against Claude's own analysis. No manual copy-paste relay. |
 
 ### Cost-efficient agent tree
 
@@ -126,6 +127,23 @@ Requirements:
 3. Blender 5.2 or newer, only for Blender and hybrid demos. The template picks Metal, OptiX, CUDA, HIP or oneAPI automatically.
 
 [`skills/photoreal-demos/references/setup.md`](skills/photoreal-demos/references/setup.md) covers installation on macOS, Windows and Linux. For long batches, keep the machine awake on AC power. [`references/batch.md`](skills/photoreal-demos/references/batch.md) explains why.
+
+### Grok
+
+Install for Claude Code:
+
+```sh
+npx skills add shaal/skills --skill grok --agent claude-code --global
+```
+
+Then say "ask grok", "check with grok", or "get a second opinion from grok". The agent writes a self-contained prompt, runs `grok -p` as a subprocess, and reads the answer directly. Follow-ups use `grok -c -p` from the same working directory. The agent treats Grok as one outside opinion, not a tiebreaker, and reports real disagreements to you.
+
+Requirements:
+
+1. The `grok` CLI (Grok Build, from xAI) on your `PATH`, logged in. Check with `grok --version`. The skill was tested with `1.0.44`.
+2. An agent that can run shell commands, such as Claude Code with the Bash tool.
+
+Each call is a live model request, so it costs time and, depending on your Grok plan, money.
 
 ## Add another skill
 
