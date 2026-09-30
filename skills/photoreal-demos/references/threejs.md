@@ -101,7 +101,7 @@ Keep common GLSL (hash, value noise, fbm, fog, sky lookup, shadow lookup) in one
 
 ## Performance
 
-- **Adaptive resolution.** Average the frame time each second. If it is over 1/40 s, lower the render scale by 0.1 (floor about 0.55). If it is under 1/75 s, raise it by 0.05. Wait two seconds between changes.
+- **Adaptive resolution.** Average the frame time each second. If it is over 1/40 s (below 40 fps), lower the render scale by 0.1 (floor about 0.55). If it stays under 1/50 s (50 fps or better) for three seconds, raise it by 0.05. Wait two seconds after each change. If a raise causes a drop within a few seconds, cap the scale below the level that caused it, so the scale does not oscillate. Lift the cap by one step after about 30 s of steady frames, so one hitch (a shader compile, a tab switch) does not cap the scale for good. Do not test for frames faster than the display: vsync holds every frame at 16.7 ms on a 60 Hz screen, so a test such as "under 1/75 s" never passes there and the scale can only go down.
 - Cap `devicePixelRatio` near 1.35 on desktop and 1.5–2 on touch devices. On touch devices, use fewer instances, lower MSAA, and smaller shadow maps.
 - Use `frustumCulled = false` on GPU-positioned instanced meshes, since their bounding spheres are wrong.
 - Merge static geometry into a few meshes with a `kind` attribute that switches shading branches.
