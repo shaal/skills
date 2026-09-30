@@ -64,4 +64,4 @@ Paths in this skill are relative to the skill's own folder. Run its scripts by a
 
 ## Many demos
 
-For a batch (for example "make 20 of these"), follow [references/batch.md](references/batch.md). It covers the concept list, a shared brief, running three builders at a time, keeping the machine awake, and checking the first result before the rest.
+For a batch (for example "make 20 of these"), follow [references/batch.md](references/batch.md). It covers the concept list, a shared brief, and pacing workers to the account's usage limit. It also covers a critic and fix pass, keeping the machine awake and the disk clear, and stopping a run.
