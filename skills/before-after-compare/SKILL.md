@@ -67,7 +67,12 @@ Key commands: `open`, `set viewport`, `eval --stdin`, `screenshot`. Hard-won rec
 - **Match the viewport for before & after.** Default to **1440px** wide for desktop
   designs: `agent-browser set viewport 1440 1000 2` (the trailing `2` = retina, crisper
   shots). Use the SAME width/zoom/scroll for both sources or the comparison is unfair.
-- **Set the viewport BEFORE scrolling** — changing the viewport resets scroll position.
+- **Set the viewport after `open` and BEFORE scrolling** — changing the viewport resets
+  scroll position.
+- **Confirm the viewport right before each capture:**
+  `agent-browser eval 'innerWidth+"x"+innerHeight+"@"+devicePixelRatio'`. Some
+  agent-browser versions reset it on navigation, and a browser that restarts after the
+  idle timeout opens at the default size. If it is wrong, run `set viewport` again.
 - **Sticky/fixed headers overlay your target.** Before scrolling to a region, hide them:
   ```js
   // agent-browser eval --stdin
