@@ -60,6 +60,7 @@ Omit `--global` to install into the current project. Installation copies skill i
 | [ship-next](skills/ship-next/SKILL.md) | Unattended driver for `ship`: branches off the current branch, ships one task, then pushes, opens a PR, and squash-merges it. Designed to run in a loop. |
 | [photoreal-demos](skills/photoreal-demos/SKILL.md) | Builds photoreal, interactive 3D web demos with three.js, Blender Cycles, or both (Blender bakes, three.js renders). Includes a GPU screenshot harness, a Blender 5.2 relight template, an HDR atlas encoder, a relighting viewer, and two complete example scenes. |
 | [grok](skills/grok/SKILL.md) | Asks Grok for a second opinion or an independent review from the shell (`grok -p`), then weighs its answer against Claude's own analysis. No manual copy-paste relay. |
+| [before-after-compare](skills/before-after-compare/SKILL.md) | Captures matched before/after screenshots of each changed UI region with agent-browser, checks they really differ, then builds one self-contained side-by-side HTML page with a one-line explanation per change. |
 
 ### Cost-efficient agent tree
 
@@ -144,6 +145,22 @@ Requirements:
 2. An agent that can run shell commands, such as Claude Code with the Bash tool.
 
 Each call is a live model request, so it costs time and, depending on your Grok plan, money.
+
+### Before-after compare
+
+Install for Claude Code (or swap the agent for `codex`):
+
+```sh
+npx skills add shaal/skills --skill before-after-compare --agent claude-code --global
+```
+
+Then ask for "a before/after page for these changes" or "screenshots of the fix before and after, side by side". The agent captures the old state (a deployed or staging URL, or a baseline build) and the new state (your local build) at the same viewport, crops each changed region, and checks that every pair really differs. It then runs the bundled `build-comparison.mjs` to make one HTML file with the images inlined, so you can attach or move it anywhere.
+
+Requirements:
+
+1. Node.js 18 or newer, for the generator.
+2. The [`agent-browser`](https://github.com/vercel-labs/agent-browser) CLI, for screenshots: `npm i -g agent-browser && agent-browser install`.
+3. Python 3 with Pillow, for cropping.
 
 ## Add another skill
 
