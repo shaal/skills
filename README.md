@@ -50,6 +50,45 @@ Run those commands from the root of a checkout of this repository, or replace
 
 Omit `--global` to install into the current project. Installation copies skill instructions; model access and tool capabilities come from the agent running them.
 
+## Claude Code `dsp` alias
+
+[`claude/dsp.zsh`](claude/dsp.zsh) adds `dsp`, a short command that starts Claude Code with:
+
+- Sonnet as the main model (`--model sonnet`).
+- Opus as the advisor (`--advisor opus`). Sonnet can ask Opus for advice during the task. The advisor receives the conversation history, so it uses more tokens.
+- Haiku for subagents that do not set their own model, such as general-purpose (`CLAUDE_CODE_SUBAGENT_MODEL=haiku`). The built-in Explore and Plan subagents, and forks, use the main model, Sonnet.
+- No permission prompts (`--dangerously-skip-permissions`).
+
+It is a shell alias, not a skill. To use it on a machine, run these commands from the root of a checkout of this repository:
+
+```sh
+rc="${ZDOTDIR:-$HOME}/.zshrc"
+line="source \"$PWD/claude/dsp.zsh\""
+grep -qsxF "$line" "$rc" || printf '\n%s\n' "$line" >> "$rc"
+source "$rc"
+```
+
+For bash, set `rc` to the startup file that your shell reads, such as `~/.bashrc` (on macOS, `~/.bash_profile`). Terminals that are already open keep their old definitions: run `source` on the startup file in each one, or open a new terminal. Arguments pass through, so `dsp --resume` and `dsp -c` work.
+
+To confirm that the advisor is on:
+
+```sh
+log="$(mktemp -d)/debug.txt"
+dsp --debug-file "$log" -p "Reply with just: ok" </dev/null
+grep AdvisorTool "$log"
+```
+
+The output must include `Server-side tool enabled with claude-opus-...`. If `dsp` printed `ok` but `grep` prints nothing, the advisor is not available in your setup, and Claude Code ignores the flag without an error.
+
+Notes:
+
+1. `--advisor` does not appear in `claude --help`. The alias was tested with Claude Code `2.1.294`. Older versions can reject the flag.
+2. The advisor must be at least as capable as the main model. Opus can advise Sonnet or Opus. With `--model fable`, Claude Code prints `"opus" cannot advise ...` and does not use the advisor.
+3. Because the alias passes `--model sonnet`, `dsp --resume` continues on Sonnet. Without `--model`, `--resume` restores the model that the session used last.
+4. `--dangerously-skip-permissions` runs every tool call without asking. `claude --help` recommends it only for sandboxes with no internet access. Use it only in projects you trust, or remove the flag from the alias to keep the prompts.
+
+Desktop apps that start Claude Code, such as T3 Code, do not read shell aliases.
+
 ## Available skills
 
 | Skill | Purpose |
