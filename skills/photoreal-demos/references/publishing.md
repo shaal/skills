@@ -12,6 +12,8 @@ Publish `index.html` with the `Artifact` tool, and pass every asset in `files` (
 - Fixed UI adds `env(safe-area-inset-*)` to its own padding. A dark single-theme page must paint `html, body` explicitly and set `color-scheme: dark`.
 - Published artifacts are private to their owner until shared. Tell the user when a page is meant for others.
 
+After the first publish, every publish must pass `url`. A publish without `url` creates a second, duplicate artifact, even from the same agent with the same `file_path`. In a 33-demo run, builders did this 3 times, and each duplicate needs the user's confirmation to delete. Write the URL into the demo's `NOTES.md` right after the first publish, so later publishes, critics and fixers can find it.
+
 ## Anywhere else
 
 The page is static. Any static host serves it unchanged: GitHub Pages, Netlify, Cloudflare Pages, S3, or `python3 -m http.server`. Keep `index.html` and `assets/` together, and serve over HTTP, never `file://`.
