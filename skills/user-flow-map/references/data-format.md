@@ -92,6 +92,13 @@ width follows the highest column. Nine columns give about 2900px.
 7. **Use at most about 9 columns and 2 rows per lane.** For bigger products,
    make one map per area or per user type.
 
+## Focus layouts (HTML viewer)
+
+The HTML viewer builds its Focus layouts from the same data, so there are no
+extra fields. `via`, `labelAt`, and side offsets apply to the Map layout only;
+Focus routes edges and places labels itself. Long labels make Focus harder to
+place: keep labels under about 26 characters.
+
 ## Labels
 
 - Labels show only while their flow plays. Each label sits on its own line,
