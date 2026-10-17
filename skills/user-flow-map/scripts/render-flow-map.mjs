@@ -45,7 +45,8 @@ const slots = new Map();
 for (const [id, n] of Object.entries(NODES)) {
   const lane = laneById.get(n.lane);
   if (!lane) errors.push(`node ${id}: unknown lane "${n.lane}"`);
-  else if ((n.row ?? 0) >= (lane.rows ?? 1)) errors.push(`node ${id}: row ${n.row} but lane "${n.lane}" has ${lane.rows ?? 1} row(s)`);
+  else if (!Number.isInteger(n.row ?? 0) || (n.row ?? 0) < 0 || (n.row ?? 0) >= (lane.rows ?? 1))
+    errors.push(`node ${id}: row must be an integer from 0 to ${(lane.rows ?? 1) - 1} (lane "${n.lane}"), got ${n.row}`);
   if (typeof n.col !== 'number') errors.push(`node ${id}: col must be a number`);
   if (!['gate', 'end'].includes(n.kind) && !n.route) errors.push(`node ${id}: missing route`);
   const slot = `${n.lane}/${n.row ?? 0}/${n.col}`;
@@ -135,6 +136,9 @@ FLOWS.forEach((f, i) =>
   }),
 );
 if (errors.length) fail(errors);
+const usedEdges = new Set(FLOWS.flatMap((f) => f.steps.map(([edgeId]) => edgeId)));
+const unused = Object.keys(EDGES).filter((id) => !usedEdges.has(id));
+if (unused.length) console.warn(`warning: no flow uses these edges, so they show only as gray lines: ${unused.join(', ')}`);
 
 // ---------- timeline ----------
 let clock = TIMING.overview;
@@ -337,7 +341,7 @@ function legendSvg() {
     [`<rect x="0" y="-11" width="30" height="18" rx="9" fill="${INK}"/>`, 'End state'],
   ];
   const lines = [
-    [`<line x1="0" y1="-4" x2="28" y2="-4" stroke="${LINE}" stroke-width="1.4"/>`, 'Every possible move'],
+    [`<line x1="0" y1="-4" x2="28" y2="-4" stroke="${LINE}" stroke-width="1.4"/>`, 'Moves between pages'],
     [`<line x1="0" y1="-4" x2="28" y2="-4" stroke="${INK}" stroke-width="3"/>`, 'Flow playing now (numbered)'],
     [`<line x1="0" y1="-4" x2="28" y2="-4" stroke="${INK}" stroke-width="2.5" stroke-dasharray="6 5"/>`, 'Failure branch'],
   ];
@@ -360,8 +364,11 @@ function labelSvg([x, y], num, text, color, gap) {
   const left = x - w / 2;
   return (
     `<rect x="${n2(left)}" y="${n2(y - h / 2)}" width="${n2(w)}" height="${h}" rx="9" fill="#fff" stroke="${color}" stroke-width="1.3"/>` +
-    `<circle cx="${n2(left + 11)}" cy="${n2(y)}" r="8" fill="${color}"/>` +
-    `<text x="${n2(left + 11)}" y="${n2(y + 3.4)}" class="num" text-anchor="middle">${num}</text>` +
+    (num === '!'
+      ? `<circle cx="${n2(left + 11)}" cy="${n2(y)}" r="7.3" fill="#fff" stroke="${color}" stroke-width="1.5"/>` +
+        `<text x="${n2(left + 11)}" y="${n2(y + 3.6)}" class="num" style="fill:${color}" text-anchor="middle">!</text>`
+      : `<circle cx="${n2(left + 11)}" cy="${n2(y)}" r="8" fill="${color}"/>` +
+        `<text x="${n2(left + 11)}" y="${n2(y + 3.4)}" class="num" text-anchor="middle">${num}</text>`) +
     lines.map((l, j) => `<text x="${n2(left + 24)}" y="${n2(y - h / 2 + 14 + j * 12.5)}" class="lbl">${esc(l)}</text>`).join('')
   );
 }
@@ -380,7 +387,9 @@ function flowSvg(flow, i) {
   let edges = '';
   let dots = '';
   let labels = '';
+  let num = 0; // failure branches show "!" and do not take a step number
   flow.steps.forEach(([edgeId, actor, text, opts], k) => {
+    const mark = EDGES[edgeId].alt ? '!' : String(++num);
     const { a, b } = stepTimes(w, k);
     const g = GEO[edgeId];
     const color = ACTORS[actor].color;
@@ -394,7 +403,7 @@ function flowSvg(flow, i) {
       `<animateMotion dur="${T}s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;${k5(a)};${k5(b)};1">` +
       `<mpath href="#${pid}" xlink:href="#${pid}"/></animateMotion></circle>`;
     const at = opts?.labelAt ?? g.label;
-    labels += `<g opacity="0">${animate('opacity', [[a, 0], [a + 0.2, 1]])}${labelSvg(at, k + 1, text, color, opts?.labelAt ? Infinity : g.gap)}</g>`;
+    labels += `<g opacity="0">${animate('opacity', [[a, 0], [a + 0.2, 1]])}${labelSvg(at, mark, text, color, opts?.labelAt ? Infinity : g.gap)}</g>`;
   });
   let nodes = '';
   for (const [id, [t, color]] of reach) {
@@ -451,7 +460,7 @@ svg{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,He
 <text x="24" y="70" class="sub">${esc(subtitle)}</text>
 <text x="24" y="108" class="cap1">Overview · ${FLOWS.length} flows · ${screens} screens and services</text>
 <text x="24" y="130" class="cap2">Each flow plays in turn. Numbered steps follow the moving dot.</text>
-<text x="24" y="151" class="cap3">Gray lines: every possible move. Bullets: the actions on that page. Full cycle: ${Math.round(T)} s.</text>
+<text x="24" y="151" class="cap3">Gray lines: moves between pages. Bullets: every action on that page. Full cycle: ${Math.round(T)} s.</text>
 ${FLOWS.map((_, i) => pill(i, false)).join('')}
 ${legendSvg()}
 ${LANES.map(laneSvg).join('')}

@@ -40,10 +40,13 @@ warns when a description is longer.
 | `fromOff`, `toOff` | Slide the anchor along the side, in pixels. Use ±30–50 to separate edges that share a side. |
 | `via` | `[[x, y], ..]`. Turns the edge into a rounded orthogonal route through these points. Make consecutive points share x or y. |
 | `labelAt` | `[x, y]` label centre. The default is the middle of a curve, or the middle of the longest straight run of a `via` route. |
-| `alt` | `true` draws it dashed, for failure branches. |
+| `alt` | `true` draws it dashed, for failure branches. Its label shows "!" instead of a step number, so the numbers count only the main path. |
 
 A step's optional 4th element, `{ labelAt: [x, y] }`, overrides the label
 position for that flow only.
+
+Every edge should belong to at least one flow. The renderer warns about edges
+that no flow uses, because they show only as gray lines and confuse the tour.
 
 ## Layout helper `L` (passed to `EDGES(L)`)
 

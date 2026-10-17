@@ -79,15 +79,14 @@ export const NODES = {
     actions: ['Find invoice', 'Refund'] },
 };
 
-// Every possible move. EDGES may be a plain object, or a function that gets the
+// Moves between pages; every edge belongs to at least one flow. EDGES may be a plain object, or a function that gets the
 // layout helper L (see data-format.md) for routing `via` points through free channels.
 export const EDGES = (L) => ({
   home_signup: { from: 'home', to: 'signup' },
-  pricing_signup: { from: 'pricing', to: 'signup', fromSide: 'B', toSide: 'B', toOff: 50,
-    via: [[L.cx('pricing'), L.below('public', 0)], [L.cx('signup') + 50, L.below('public', 0)]] },
   signup_gate: { from: 'signup', to: 'gate', fromSide: 'B', fromOff: -20, toSide: 'L',
     labelAt: [L.cx('signup') - 70, L.below('public', 0)] },
-  login_gate: { from: 'login', to: 'gate', fromSide: 'B', fromOff: -40, toSide: 'R' },
+  login_gate: { from: 'login', to: 'gate', fromSide: 'B', fromOff: -40, toSide: 'R',
+    labelAt: [L.cx('login') + 10, L.below('public', 0)] },
   gate_dashboard: { from: 'gate', to: 'dashboard', fromSide: 'B', toSide: 'T', toOff: 30 },
   dashboard_editor: { from: 'dashboard', to: 'editor' },
   editor_share: { from: 'editor', to: 'shareDlg' },
@@ -130,26 +129,35 @@ export const FLOWS = [
       ['dashboard_editor', 'member', 'New note'],
     ] },
   { title: 'Invite a teammate', who: 'Member → Invited teammate',
-    desc: 'A member invites someone from the share dialog. The email link opens the invite page; signing up joins the team.',
+    desc: 'A member invites someone from the team page. The email link opens the invite page; signing up joins the team.',
     steps: [
-      ['editor_share', 'member', 'Share'],
-      ['share_email', 'member', 'Invite by email'],
+      ['dashboard_team', 'member', 'Team'],
+      ['team_email', 'member', 'Invite member'],
       ['email_invite', 'system', 'Invite link'],
       ['invite_gate', 'invitee', 'Accept → sign up'],
       ['gate_dashboard', 'system', 'Joins the team'],
     ] },
-  { title: 'Upgrade to Pro', who: 'Member',
-    desc: 'Checkout runs on Stripe. The webhook switches the plan and emails a receipt. A declined card returns to billing.',
+  { title: 'Share a note', who: 'Member',
+    desc: 'The share dialog copies a link or sends an email invite. The invite then works as in flow 2.',
     steps: [
+      ['editor_share', 'member', 'Share'],
+      ['share_email', 'member', 'Invite by email'],
+    ] },
+  { title: 'Upgrade to Pro', who: 'Member',
+    desc: 'A daily job emails trial users. Checkout runs on Stripe; the webhook switches the plan and sends a receipt.',
+    steps: [
+      ['cron_email', 'system', 'Trial ends soon'],
       ['billing_stripe', 'member', 'Upgrade to Pro'],
       ['stripe_hook', 'system', 'Payment succeeded'],
       ['hook_billing', 'system', 'Plan = Pro'],
       ['hook_email', 'system', 'Receipt'],
       ['stripe_fail', 'system', 'Card declined'],
     ] },
-  { title: 'Forgot password', who: 'Visitor',
-    desc: 'The reset page emails a one-time link. The link opens the same page to set a new password.',
+  { title: 'Log in', who: 'Visitor → Member',
+    desc: 'Log in goes through the session check. A forgotten password gets a one-time link by email.',
     steps: [
+      ['login_gate', 'visitor', 'Log in'],
+      ['gate_dashboard', 'system', 'Dashboard'],
       ['login_reset', 'visitor', 'Forgot password'],
       ['reset_email', 'visitor', 'Request link'],
       ['email_reset', 'system', 'Reset link'],

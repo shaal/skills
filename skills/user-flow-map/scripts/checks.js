@@ -14,6 +14,7 @@
 globalThis.flowMapChecks = function flowMapChecks(svg) {
   const issues = [];
   const width = Number(svg.getAttribute('width'));
+  const height = Number(svg.getAttribute('height'));
   const captionMax = Number(svg.getAttribute('data-caption-max')) || Infinity;
   const header = Number(svg.getAttribute('data-header')) || Infinity;
   const overlap = (a, b) => [
@@ -67,7 +68,8 @@ globalThis.flowMapChecks = function flowMapChecks(svg) {
         labelMinSlack = Math.min(labelMinSlack, slack);
         if (slack < 2) issues.push(`${flow}: label "${label}" has ${slack.toFixed(1)}px slack`);
       });
-      if (rb.x < 0 || rb.x + rb.width > width) issues.push(`${flow}: label "${label}" is outside the canvas`);
+      if (rb.x < 0 || rb.y < 0 || rb.x + rb.width > width || rb.y + rb.height > height)
+        issues.push(`${flow}: label "${label}" is outside the canvas`);
       pills.push({ label, b: rb });
     });
     for (let i = 0; i < pills.length; i++)
