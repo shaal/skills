@@ -176,9 +176,12 @@ Tell the user, in this order:
      for example) may not run JavaScript, and the page then shows only a
      message. Two ways, and ask before either one, because the map can reveal
      internal routes and admin pages:
-     - **Same Wi-Fi:** in the folder, run `python3 -m http.server 8000 --bind 0.0.0.0`,
-       then open `http://<computer's LAN IP>:8000/user-flows.html` on the phone.
-       Stop the server afterwards.
+     - **Same Wi-Fi:** copy only the HTML into an empty folder and serve that
+       folder. `http.server` lists and serves its whole directory, so never
+       start it in the repo, where it would expose `.env` and everything else:
+       `mkdir -p /tmp/flow-map-share && cp user-flows.html /tmp/flow-map-share/ && cd /tmp/flow-map-share && python3 -m http.server 8000 --bind 0.0.0.0`.
+       Open `http://<LAN IP>:8000/user-flows.html` on the phone (on macOS,
+       `ipconfig getifaddr en0` prints the IP). Stop the server with Ctrl-C.
      - **Hosting:** a private preview deploy or a static host the user picks.
 2. The name: a user flow map drawn as a swimlane diagram, close to a service
    blueprint if it has a System lane.
