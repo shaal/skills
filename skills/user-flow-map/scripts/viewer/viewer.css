@@ -11,7 +11,8 @@
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
   font: 14px/1.4 -apple-system, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
 body { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; height: 100dvh; overflow: hidden; }
-button, select { font: inherit; color: inherit; }
+button, select { font: inherit; color: inherit; touch-action: manipulation; }
+.noscript { padding: 24px; font-size: 15px; }
 
 /* Top bar */
 .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 14px;

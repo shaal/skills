@@ -34,12 +34,25 @@ export async function verifyHtml(chromium, htmlPath, outDir, here) {
         continue;
       }
       await page.evaluate(checks);
-      const result = await page.evaluate(() => globalThis.flowViewerChecks());
-      console.log(
-        `[${dev.name} ${width}x${height}] min slack: cards ${result.cardMinSlack.toFixed(1)}px, labels ` +
-          `${result.labelMinSlack.toFixed(1)}px, ${result.issues.length} issue(s)`,
-      );
-      for (const issue of result.issues) errors.push(`[${dev.name}] ${issue}`);
+      // Run the checks in the page's own fonts, then in the system UI font (Inter is rarely installed).
+      for (const font of [null, '-apple-system,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif']) {
+        const result = await page.evaluate((f) => {
+          document.getElementById('font-override')?.remove();
+          if (f) {
+            const st = document.createElement('style');
+            st.id = 'font-override';
+            st.textContent = `#canvas, #canvas * { font-family: ${f} !important; }`;
+            document.head.appendChild(st);
+          }
+          return globalThis.flowViewerChecks();
+        }, font);
+        console.log(
+          `[${dev.name} ${width}x${height}${font ? ' system font' : ''}] min slack: cards ${result.cardMinSlack.toFixed(1)}px, ` +
+            `labels ${result.labelMinSlack.toFixed(1)}px, ${result.issues.length} issue(s)`,
+        );
+        for (const issue of result.issues) errors.push(`[${dev.name}${font ? ' system font' : ''}] ${issue}`);
+      }
+      await page.evaluate(() => document.getElementById('font-override')?.remove());
       const focus = await page.evaluate(() => window.flowViewer.set({ flow: 0, view: 'focus', steps: 'all' }).layout);
       if (focus !== dev.focus) errors.push(`[${dev.name}] Focus uses the ${focus} layout, expected ${dev.focus}`);
 
@@ -67,6 +80,34 @@ export async function verifyHtml(chromium, htmlPath, outDir, here) {
         hashes.set(hash, name);
         console.log(`  ${file}`);
       }
+
+      // Live interaction: draw-on, arrowhead, camera tween, and a swipe (mouse drag uses the same code).
+      await page.evaluate((i) => window.flowViewer.set({ flow: i, view: 'focus', steps: 'step', step: 0 }), longest);
+      await page.evaluate(() => document.getElementById('next').click());
+      await page.waitForTimeout(1000);
+      const live = await page.evaluate(() => {
+        const info = window.flowViewer.info();
+        const path = document.querySelector('#flowlines path.draw');
+        const near = (a, b) => Math.abs(a - b) < 0.5;
+        return {
+          step: info.state.step,
+          dash: path ? parseFloat(getComputedStyle(path).strokeDashoffset) : 0,
+          late: document.querySelectorAll('#flowlines .late').length,
+          framed: ['x', 'y', 'w', 'h'].every((k) => near(info.viewBox[k], info.fit[k])),
+        };
+      });
+      if (live.step !== 1) errors.push(`[${dev.name}] the › button moved to step ${live.step + 1}, expected 2`);
+      if (live.dash > 0.01) errors.push(`[${dev.name}] the current step's line did not finish drawing (dashoffset ${live.dash})`);
+      if (live.late) errors.push(`[${dev.name}] the current step's arrowhead never appeared`);
+      if (!live.framed) errors.push(`[${dev.name}] the camera did not end on the step frame`);
+      const box = await page.locator('#canvas').boundingBox();
+      await page.mouse.move(box.x + box.width * 0.8, box.y + box.height * 0.5);
+      await page.mouse.down();
+      await page.mouse.move(box.x + box.width * 0.3, box.y + box.height * 0.52, { steps: 5 });
+      await page.mouse.up();
+      await page.waitForTimeout(700);
+      const swiped = await page.evaluate(() => window.flowViewer.info().state.step);
+      if (swiped !== 2) errors.push(`[${dev.name}] a right-to-left swipe moved to step ${swiped + 1}, expected 3`);
 
       // Deep link: the hash opens a specific step.
       const steps = await page.evaluate((i) => window.flowViewer.flows[i].steps, longest);

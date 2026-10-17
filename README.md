@@ -224,7 +224,9 @@ Both outputs have one lane per access zone (Public, Members, System, Admin) and 
 Requirements:
 
 1. Node.js 18 or newer, for the renderer.
-2. Playwright with Chromium, for verification. The agent installs it in a scratch folder, not in your repo, and runs the verifier from there: `mkdir -p /tmp/flow-map-verify && cd /tmp/flow-map-verify && npm i playwright && npx playwright install chromium`. Without Playwright, the agent can run `scripts/checks.js` in any browser tool that runs JavaScript.
+2. Playwright with Chromium and WebKit, for verification. The agent installs it in a scratch folder, not in your repo, and runs the verifier from there: `mkdir -p /tmp/flow-map-verify && cd /tmp/flow-map-verify && npm i playwright && npx playwright install chromium webkit`. Without Playwright, the agent can run `scripts/checks.js` (SVG) or `scripts/viewer-checks.js` (HTML) in any browser tool that runs JavaScript.
+
+To open the HTML viewer on a phone, use a URL, such as a local server on the same Wi-Fi or a private host. A file preview, such as iOS Quick Look, may not run the viewer's JavaScript.
 
 ## Add another skill
 

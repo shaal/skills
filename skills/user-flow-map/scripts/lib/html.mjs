@@ -113,6 +113,7 @@ ${CSS.label}
 </style>
 </head>
 <body>
+<noscript><p class="noscript">This user flow map needs JavaScript. Open the file in a web browser (Safari, Chrome, Firefox, Edge), not in a file preview.</p></noscript>
 <header class="bar">
   <h1 class="title">${title}</h1>
   <div class="controls">

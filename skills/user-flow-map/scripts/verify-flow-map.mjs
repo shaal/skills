@@ -2,7 +2,10 @@
 /*
  * Verify a user flow map in headless Chromium (Playwright).
  *
- *   node verify-flow-map.mjs <map.svg|viewer.html> [--out <dir>]
+ *   node verify-flow-map.mjs <map.svg|viewer.html> [--out <dir>] [--browser chromium|webkit|firefox]
+ *
+ * Use --browser webkit to check the viewer in Safari's engine (iPhone, iPad, Mac);
+ * install it once with `npx playwright install webkit`.
  *
  * For an HTML viewer, see lib/verify-html.mjs: viewer-checks.js at phone,
  * sideways phone, tablet, and desktop sizes, plus rotation and deep links.
@@ -29,8 +32,10 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const args = process.argv.slice(2);
-const svgArg = args.find((a) => !a.startsWith('--'));
+const svgArg = args.find((a, i) => !a.startsWith('--') && !['--out', '--browser'].includes(args[i - 1]));
 const outIdx = args.indexOf('--out');
+const browserIdx = args.indexOf('--browser');
+const browserName = browserIdx >= 0 ? args[browserIdx + 1] : 'chromium';
 if (!svgArg) {
   console.error('Usage: node verify-flow-map.mjs <map.svg|viewer.html> [--out <dir>]');
   process.exit(2);
@@ -51,8 +56,8 @@ async function loadChromium() {
     for (const name of ['playwright', '@playwright/test', 'playwright-core']) {
       try {
         const mod = await import(pathToFileURL(createRequire(base).resolve(name)).href);
-        const chromium = mod.chromium ?? mod.default?.chromium;
-        if (chromium) return chromium;
+        const type = mod[browserName] ?? mod.default?.[browserName];
+        if (type) return type;
       } catch {
         // try the next candidate
       }

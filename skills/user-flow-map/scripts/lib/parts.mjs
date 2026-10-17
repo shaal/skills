@@ -85,7 +85,8 @@ export function ringSvg(kind, b, color) {
 /** Label pill size. Side-to-side edges wrap to fit the gap between the cards. */
 export function labelLayout(text, gap, maxChars = 18) {
   const lines = wrap(text, Number.isFinite(gap) ? Math.floor((gap - 36) / CHAR_W) : maxChars);
-  return { lines, w: Math.max(...lines.map((l) => l.length)) * CHAR_W + 34, h: 8 + lines.length * 12.5 };
+  // +38: number circle and padding, plus 4 so short words with wide letters ("Team") still fit in Safari.
+  return { lines, w: Math.max(...lines.map((l) => l.length)) * CHAR_W + 38, h: 8 + lines.length * 12.5 };
 }
 
 /** Numbered label pill centred at [x, y]. num "!" marks a failure branch. */

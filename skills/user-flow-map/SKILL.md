@@ -47,7 +47,7 @@ path, for example `node <skill_dir>/scripts/render-flow-map.mjs ...`.
 any browser tool that can run JavaScript in a page. Install Playwright in a
 scratch folder, never in the user's repo, so their `package.json` stays
 unchanged: `mkdir -p /tmp/flow-map-verify && cd /tmp/flow-map-verify && npm i
-playwright && npx playwright install chromium`.
+playwright && npx playwright install chromium webkit`.
 
 ## Workflow
 
@@ -73,8 +73,11 @@ playwright && npx playwright install chromium`.
    then the same command with the `.html` file. The verifier finds Playwright in
    the current directory. For the HTML, it runs every flow in Map and Focus, and
    every step in step mode, at phone, sideways phone, tablet, and desktop sizes.
-   Fix every `ERROR`, then Read the screenshots yourself (checklist below).
-   Re-render and re-verify until both pass and the frames look right.
+   Run the HTML check a second time with `--browser webkit`: Safari's engine
+   (every iPhone browser) measures text more tightly than Chrome and has stricter
+   limits. Fix every `ERROR`, then Read the screenshots yourself (checklist
+   below). Re-render and re-verify until everything passes and the frames look
+   right.
 7. **Deliver** (see the end of this file).
 
 ## Modelling rules
@@ -155,8 +158,11 @@ You do not lay out Focus by hand; the renderer derives it from the Map data.
   with `labelAt`.
 - **GitHub shows the SVG shrunk to the page width.** It still animates there,
   but the text is too small to read. Recommend opening the file in a browser.
-- **The output has no script.** It animates as a file, inside an `<img>`, and
+- **The SVG has no script.** It animates as a file, inside an `<img>`, and
   on GitHub. With `prefers-reduced-motion`, it shows the static full map.
+- **Test the HTML in WebKit too.** WebKit fonts measure wider than Chrome's
+  headless fallback, and Safari throws after 100 `history.replaceState` calls
+  in 10 seconds (the viewer debounces its URL updates for this reason).
 
 ## Deliver
 
@@ -166,9 +172,14 @@ Tell the user, in this order:
    - **SVG:** run `open <path>/user-flows.svg` (or the platform's equivalent).
      It opens at full size; zoom out to fit it to the window.
    - **HTML:** run `open <path>/user-flows.html` on a computer.
-   - **HTML on a phone:** send the file with AirDrop or a file share, or host it.
-     Ask before you start a local network server or publish anything, because
-     the map can reveal internal routes and admin pages.
+   - **HTML on a phone:** open it from a URL. A file preview (iOS Quick Look,
+     for example) may not run JavaScript, and the page then shows only a
+     message. Two ways, and ask before either one, because the map can reveal
+     internal routes and admin pages:
+     - **Same Wi-Fi:** in the folder, run `python3 -m http.server 8000 --bind 0.0.0.0`,
+       then open `http://<computer's LAN IP>:8000/user-flows.html` on the phone.
+       Stop the server afterwards.
+     - **Hosting:** a private preview deploy or a static host the user picks.
 2. The name: a user flow map drawn as a swimlane diagram, close to a service
    blueprint if it has a System lane.
 3. What it covers: the number of screens and services, the lanes, the user

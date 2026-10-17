@@ -60,14 +60,20 @@
   };
 
   // ---------- camera ----------
+  // getBoundingClientRect, not clientWidth: SVG elements report 0 client size in some engines.
+  const size = () => {
+    const r = svg.getBoundingClientRect();
+    return { w: r.width || 1, h: r.height || 1 };
+  };
   function scaleFor(b, pad = 24) {
     const max = state.flow >= 0 && state.steps === 'step' ? STEP_MAX_SCALE : MAX_SCALE;
-    return Math.min(max, svg.clientWidth / (b.w + 2 * pad), svg.clientHeight / (b.h + 2 * pad));
+    const { w, h } = size();
+    return Math.min(max, w / (b.w + 2 * pad), h / (b.h + 2 * pad));
   }
   function fitBox(b, pad = 24) {
     const s = scaleFor(b, pad);
-    const w = svg.clientWidth / s;
-    const h = svg.clientHeight / s;
+    const w = size().w / s;
+    const h = size().h / s;
     return { x: b.x + b.w / 2 - w / 2, y: b.y + b.h / 2 - h / 2, w, h };
   }
   const setVB = (v) => {
@@ -94,7 +100,7 @@
     if (!F) return D.map.bounds;
     if (state.steps === 'all') {
       // A long column fits the width and starts at the top; drag down to read on.
-      if (lk === 'column') return { ...L.bounds, h: Math.min(L.bounds.h, (L.bounds.w * svg.clientHeight) / svg.clientWidth) };
+      if (lk === 'column') return { ...L.bounds, h: Math.min(L.bounds.h, (L.bounds.w * size().h) / size().w) };
       return L.bounds;
     }
     const s = L.steps[state.step];
@@ -317,7 +323,7 @@
     const r = rect();
     const px = cx === undefined ? 0.5 : (cx - r.left) / r.width;
     const py = cy === undefined ? 0.5 : (cy - r.top) / r.height;
-    const w = Math.min(Math.max(vb.w / factor, svg.clientWidth / 6), svg.clientWidth / 0.04);
+    const w = Math.min(Math.max(vb.w / factor, size().w / 6), size().w / 0.04);
     const h = (w * vb.h) / vb.w;
     setVB({ x: vb.x + (vb.w - w) * px, y: vb.y + (vb.h - h) * py, w, h });
   }
@@ -343,7 +349,7 @@
       const s = Math.hypot(b.x - a.x, b.y - a.y) / gesture.d0;
       const m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
       const v = gesture.vb0;
-      const w = Math.min(Math.max(v.w / s, svg.clientWidth / 6), svg.clientWidth / 0.04);
+      const w = Math.min(Math.max(v.w / s, size().w / 6), size().w / 0.04);
       const h = (w * v.h) / v.w;
       const ax = v.x + ((gesture.m0.x - r.left) / r.width) * v.w;
       const ay = v.y + ((gesture.m0.y - r.top) / r.height) * v.h;
@@ -378,7 +384,13 @@
   }, { passive: false });
 
   // ---------- URL hash: #flow=3&view=focus&steps=step&step=2 ----------
+  // Debounced: Safari throws after 100 replaceState calls in 10 seconds.
+  let hashTimer = 0;
   function writeHash() {
+    clearTimeout(hashTimer);
+    hashTimer = setTimeout(writeHashNow, 250);
+  }
+  function writeHashNow() {
     const p = new URLSearchParams();
     if (state.flow >= 0) {
       p.set('flow', state.flow + 1);
@@ -387,7 +399,11 @@
       if (state.steps === 'step') p.set('step', state.step + 1);
     }
     const h = p.toString();
-    if (location.hash.slice(1) !== h) history.replaceState(null, '', h ? `#${h}` : location.pathname + location.search);
+    try {
+      if (location.hash.slice(1) !== h) history.replaceState(null, '', h ? `#${h}` : location.pathname + location.search);
+    } catch {
+      // The URL is a convenience; never let it break the viewer.
+    }
   }
   function readHash() {
     const p = new URLSearchParams(location.hash.slice(1));
@@ -425,7 +441,7 @@
       const b = g.querySelector('rect').getBBox();
       return { k: +g.dataset.k, x: b.x, y: b.y, w: b.width, h: b.height, text: [...g.querySelectorAll('text.lbl')].map((t) => t.textContent).join(' ') };
     });
-    return { state: { ...state }, layout: layoutKey(), scale, viewBox: { ...vb }, canvas: { x: r.left, y: r.top, w: r.width, h: r.height },
+    return { state: { ...state }, layout: layoutKey(), scale, viewBox: { ...vb }, fit: fitBox(target), canvas: { x: r.left, y: r.top, w: r.width, h: r.height },
       target, stepBoxes: stepBoxes && { from: toScreen(stepBoxes.from), to: toScreen(stepBoxes.to), label: toScreen(stepBoxes.label) }, cards, labels };
   }
   window.flowViewer = {
