@@ -100,6 +100,7 @@ Desktop apps that start Claude Code, such as T3 Code, do not read shell aliases.
 | [photoreal-demos](skills/photoreal-demos/SKILL.md) | Builds photoreal, interactive 3D web demos with three.js, Blender Cycles, or both (Blender bakes, three.js renders). Includes a GPU screenshot harness, a Blender 5.2 relight template, an HDR atlas encoder, a relighting viewer, and two complete example scenes. |
 | [grok](skills/grok/SKILL.md) | Asks Grok for a second opinion or an independent review from the shell (`grok -p`), then weighs its answer against Claude's own analysis. No manual copy-paste relay. |
 | [before-after-compare](skills/before-after-compare/SKILL.md) | Captures matched before/after screenshots of each changed UI region with agent-browser, checks they really differ, then builds one self-contained side-by-side HTML page with a one-line explanation per change. |
+| [user-flow-map](skills/user-flow-map/SKILL.md) | Maps every page, action, and user type of a website or repo into one animated swimlane SVG (a user flow map, close to a service blueprint). Each flow plays in turn with numbered steps. Includes a renderer, a Playwright verifier, and an example. |
 
 ### Cost-efficient agent tree
 
@@ -200,6 +201,27 @@ Requirements:
 1. Node.js 18 or newer, for the generator.
 2. The [`agent-browser`](https://github.com/vercel-labs/agent-browser) CLI, for screenshots: `npm i -g agent-browser && agent-browser install`.
 3. Python 3 with Pillow, for cropping.
+
+### User flow map
+
+Install for Claude Code (or swap the agent for `codex`):
+
+```sh
+npx skills add shaal/skills --skill user-flow-map --agent claude-code --global
+```
+
+Then ask, in a repository or with a URL: "map all the user flows of this site as an animated SVG", or "show every action and user type on this app". The agent:
+
+1. Inventories the routes, guards, actions, webhooks, crons, and emails. A live site works too, but only for what a visitor can see.
+2. Writes a small data file and renders it with the bundled `render-flow-map.mjs`.
+3. Checks the result with `verify-flow-map.mjs`: text overflow and label collisions in the fonts a viewer really has, plus one screenshot per flow.
+
+The SVG has one lane per access zone (Public, Members, System, Admin) and one line colour per user type, and each card lists the actions on that page. Flows play one at a time with numbered steps and a moving dot. It has no script, so it animates as a file and on GitHub. With reduced motion, it shows the full map without animation.
+
+Requirements:
+
+1. Node.js 18 or newer, for the renderer.
+2. Playwright with Chromium, for verification. The agent installs it in a scratch folder, not in your repo, and runs the verifier from there: `mkdir -p /tmp/flow-map-verify && cd /tmp/flow-map-verify && npm i playwright && npx playwright install chromium`. Without Playwright, the agent can run `scripts/checks.js` in any browser tool that runs JavaScript.
 
 ## Add another skill
 
