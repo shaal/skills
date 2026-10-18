@@ -1,0 +1,105 @@
+:root {
+  --ink: #2c2620;
+  --muted: #6b6259;
+  --line: #d9d1c4;
+  --bg: #fafaf7;
+  --panel: #ffffff;
+  --accent: #2c2620;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+  font: 14px/1.4 -apple-system, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+body { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; height: 100dvh; overflow: hidden; }
+button, select { font: inherit; color: inherit; touch-action: manipulation; }
+.noscript { padding: 24px; font-size: 15px; }
+
+/* Top bar */
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 14px;
+  padding-top: max(10px, env(safe-area-inset-top)); background: var(--panel); border-bottom: 1px solid var(--line); }
+.title { margin: 0; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1 1 200px; }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+select { height: 36px; padding: 0 30px 0 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); max-width: 100%; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.seg button { height: 34px; padding: 0 12px; border: 0; background: var(--panel); cursor: pointer; white-space: nowrap; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+.seg button:disabled { opacity: 0.4; cursor: default; }
+.tool { height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); cursor: pointer; }
+button:focus-visible, select:focus-visible { outline: 2px solid #2f6fdb; outline-offset: 2px; }
+
+/* Canvas */
+.stage { position: relative; min-height: 0; }
+#canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; user-select: none;
+  -webkit-user-select: none; cursor: grab; }
+#canvas.dragging { cursor: grabbing; }
+.card { transition: transform 0.55s cubic-bezier(.4, 0, .2, 1), opacity 0.35s ease; }
+.card.inactive { opacity: 0.22; }
+.card.gone { opacity: 0; pointer-events: none; }
+.base-edge { fill: none; stroke: #b8b0a3; stroke-width: 1.4; }
+#base { transition: opacity 0.3s ease; }
+#base.dim { opacity: 0.3; }
+#base.gone, #lanes.gone { opacity: 0; }
+#lanes { transition: opacity 0.3s ease; }
+.flowline { fill: none; stroke-width: 3; stroke-linecap: round; }
+.flowline.draw { stroke-dasharray: 1 2; transition: stroke-dashoffset 0.6s ease; }
+.flowline.alt { stroke-dasharray: 7 5; stroke-width: 2.6; }
+.jump { fill: none; stroke: #b8b0a3; stroke-width: 1.6; stroke-dasharray: 2 5; stroke-linecap: round; }
+.lane-tag { font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.again { font-size: 10px; font-weight: 700; fill: var(--muted); }
+.past { opacity: 0.55; }
+#dot { pointer-events: none; }
+.late { opacity: 0; }
+#canvas.instant .card, #canvas.instant #base, #canvas.instant #lanes { transition: none !important; }
+
+/* Zoom buttons, floating over the canvas */
+.zoom { position: absolute; right: 10px; bottom: 10px; display: flex; flex-direction: column; border: 1px solid var(--line);
+  border-radius: 12px; overflow: hidden; background: var(--panel); box-shadow: 0 2px 10px rgba(0,0,0,.06); }
+.zoom button { width: 44px; height: 40px; border: 0; background: var(--panel); cursor: pointer; font-size: 18px; }
+.zoom button + button { border-top: 1px solid var(--line); }
+#fit-btn { font-size: 12px; font-weight: 600; }
+
+/* Legend */
+.key { position: absolute; top: 10px; right: 10px; max-width: min(340px, calc(100% - 20px)); background: var(--panel);
+  border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; box-shadow: 0 6px 24px rgba(0,0,0,.08); font-size: 13px; }
+.key h2 { margin: 0 0 6px; font-size: 13px; }
+.key ul { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 4px; }
+.key li { display: flex; align-items: center; gap: 8px; }
+.swatch { width: 22px; height: 4px; border-radius: 2px; flex: none; }
+.hint { color: var(--muted); margin: 0; }
+
+/* Bottom sheet */
+.sheet { display: flex; align-items: center; gap: 12px; padding: 10px 14px; padding-bottom: max(10px, env(safe-area-inset-bottom));
+  background: var(--panel); border-top: 1px solid var(--line); min-height: 64px; }
+.sheet-text { flex: 1; min-width: 0; }
+#sheet-title { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#sheet-body { color: var(--muted); font-size: 13px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.chip { display: inline-block; padding: 0 7px; border-radius: 999px; color: #fff; font-size: 11.5px; font-weight: 700; line-height: 18px; margin-right: 4px; }
+.sheet-nav { display: flex; gap: 8px; flex: none; }
+.sheet-nav button { width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); cursor: pointer; font-size: 20px; line-height: 1; }
+.sheet-nav button:disabled { opacity: 0.35; cursor: default; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (max-width: 640px) {
+  .bar { padding: 8px 10px; gap: 6px; }
+  .title { display: none; }
+  .controls { width: 100%; display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; }
+  select { grid-row: 1; grid-column: 1 / 3; min-width: 0; width: 100%; }
+  #key-btn { grid-row: 1; grid-column: 3; }
+  .seg[aria-label="Layout"] { grid-row: 2; grid-column: 1; }
+  .seg[aria-label="Steps"] { grid-row: 2; grid-column: 2 / 4; }
+  .seg button { flex: 1; padding: 0 8px; }
+  .tool { padding: 0 10px; }
+}
+@media (max-height: 500px) {
+  .bar { padding: 6px 10px; }
+  .title { display: none; }
+  .sheet { min-height: 0; padding: 6px 12px; padding-bottom: max(6px, env(safe-area-inset-bottom)); }
+  #sheet-body { -webkit-line-clamp: 1; }
+  .sheet-nav button { width: 40px; height: 40px; }
+  .zoom { flex-direction: row; }
+  .zoom button + button { border-top: 0; border-left: 1px solid var(--line); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card, #base, #lanes, .flowline.draw { transition: none; }
+}

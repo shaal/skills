@@ -1,20 +1,32 @@
 ---
 name: user-flow-map
 description: >-
-  Map every user flow of a website or app into one animated SVG: a swimlane user
-  flow map (close to a service blueprint) with a lane per access zone, a line
-  colour per user type, every page's actions listed on its card, and a tour that
-  plays each flow in turn with numbered steps and a moving dot. Works from a code
-  repository (most accurate) or from a live website. Use when the user asks for a
-  user flow diagram, all user flows or user journeys, every action and user type
-  on a site, a site or screen flow map, a swimlane diagram or service blueprint
-  of an app, or an animated diagram of how people use a product.
+  Map every user flow of a website or app into a swimlane user flow map (close
+  to a service blueprint): a lane per access zone, a line colour per user type,
+  and every page's actions listed on its card. Outputs an animated SVG that
+  plays each flow in turn (works on GitHub and in an <img>), and an interactive
+  HTML viewer for phones and small screens: pick a flow, switch between the full
+  Map and a Focus view that keeps only the flow's boxes, step box by box, and
+  pinch or drag to zoom. Works from a code repository (most accurate) or from a
+  live website. Use when the user asks for a user flow diagram, all user flows or
+  user journeys, every action and user type on a site, a site or screen flow
+  map, a swimlane diagram or service blueprint of an app, an animated or
+  interactive diagram of how people use a product, or one they can read on a phone.
 ---
 
 # user-flow-map
 
-Build one self-contained, animated SVG that shows **every page, every action on
-it, and every user type** of a product, then plays each flow in turn.
+Show **every page, every action on it, and every user type** of a product, from
+one data file, in two outputs:
+
+| Output | Best for | How it works |
+| --- | --- | --- |
+| `user-flows.svg` | GitHub, READMEs, docs, a quick look | Animated: each flow plays in turn. No script, so it runs in an `<img>` and on GitHub. Too wide to read on a phone. |
+| `user-flows.html` | Phones, tablets, presenting, exploring | Interactive: flow picker, **Map** (every box in place) or **Focus** (only the flow's boxes, gaps removed), **All steps** or **Step by step**, swipe or arrow keys, pinch, drag or scroll to zoom, links to a step (`#flow=3&view=focus&steps=step&step=2`). |
+
+Make both unless the user asks for one. GitHub shows an HTML file as source
+code, so the SVG is the one to embed in a README; the HTML is for opening in a
+browser or hosting.
 
 **What it is called.** This is a **user flow map** drawn as a **swimlane
 diagram**. With a System lane (payments, webhooks, cron, email), it is close to
@@ -35,14 +47,14 @@ path, for example `node <skill_dir>/scripts/render-flow-map.mjs ...`.
 any browser tool that can run JavaScript in a page. Install Playwright in a
 scratch folder, never in the user's repo, so their `package.json` stays
 unchanged: `mkdir -p /tmp/flow-map-verify && cd /tmp/flow-map-verify && npm i
-playwright && npx playwright install chromium`.
+playwright && npx playwright install chromium webkit`.
 
 ## Workflow
 
 1. **Scope.** Confirm the source: a repository (preferred, accurate) or a live
    URL (black box). Pick the output folder: in a repo, `docs/user-flows/`, with
-   the data file `flows.mjs` next to `user-flows.svg` so the user can regenerate
-   it. Do not commit unless the user asks.
+   the data file `flows.mjs` next to `user-flows.svg` and `user-flows.html` so
+   the user can regenerate them. Do not commit unless the user asks.
 2. **Inventory.** Follow [references/inventory.md](references/inventory.md).
    With subagents, run the two explorer briefs there in parallel: customer
    flows, and admin + system actors. Trust the code over existing docs, and
@@ -51,13 +63,21 @@ playwright && npx playwright install chromium`.
 4. **Lay out.** Copy [examples/acme-notes.flows.mjs](examples/acme-notes.flows.mjs)
    and edit it. The format, the layout helper, and the placement rules are in
    [references/data-format.md](references/data-format.md).
-5. **Render.** `node <skill_dir>/scripts/render-flow-map.mjs flows.mjs user-flows.svg`.
-   It validates the data and prints when each flow is fully drawn.
+5. **Render.** The output type follows the file extension:
+   `node <skill_dir>/scripts/render-flow-map.mjs flows.mjs user-flows.svg`, then
+   the same command with `user-flows.html`. The renderer validates the data. For
+   the HTML, it prints one line per flow saying whether the Focus layout routed
+   cleanly.
 6. **Verify.** From the scratch folder that has Playwright, run
-   `node <skill_dir>/scripts/verify-flow-map.mjs /absolute/path/user-flows.svg --out <dir>`.
-   The verifier finds Playwright in the current directory. Fix every `ERROR`,
-   then Read every `flow-NN.png` yourself (checklist below).
-   Re-render and re-verify until it passes and the frames look right.
+   `node <skill_dir>/scripts/verify-flow-map.mjs /absolute/path/user-flows.svg --out <dir>`,
+   then the same command with the `.html` file. The verifier finds Playwright in
+   the current directory. For the HTML, it runs every flow in Map and Focus, and
+   every step in step mode, at phone, sideways phone, tablet, and desktop sizes.
+   Run the HTML check a second time with `--browser webkit`: Safari's engine
+   (every iPhone browser) measures text more tightly than Chrome and has stricter
+   limits. Fix every `ERROR`, then Read the screenshots yourself (checklist
+   below). Re-render and re-verify until everything passes and the frames look
+   right.
 7. **Deliver** (see the end of this file).
 
 ## Modelling rules
@@ -96,10 +116,35 @@ playwright && npx playwright install chromium`.
 - Two screenshots that are identical mean the scrub did not land. The verifier
   checks this, so do not trust a run that skipped it.
 
+For the HTML viewer, also check the phone screenshots: in Focus on an upright
+phone, each step shows two boxes and the label between them, with readable
+text. The verifier already fails on text under 12px, a box off screen,
+overlapping labels, a page that scrolls, and rotation that does not switch the
+Focus layout.
+
 Without Playwright, load the SVG in your browser tool, evaluate
 `scripts/checks.js`, call `flowMapChecks(svgElement)`, then pause the SVG and
 call `setCurrentTime(t)` with each `done` time from its `data-flow-times`
-attribute, taking one screenshot per flow.
+attribute, taking one screenshot per flow. For the HTML, open it, evaluate
+`scripts/viewer-checks.js`, and call `flowViewerChecks()` at each screen size.
+
+## How the HTML viewer lays out Focus
+
+You do not lay out Focus by hand; the renderer derives it from the Map data.
+
+- **Upright phone (narrow and tall): one column in step order.** Each step is a
+  short vertical arrow with its label in the gap. A box the flow returns to
+  appears again, marked "again", so arrows never jump backwards. Each box shows
+  its lane name above it.
+- **Wider screens: a compact swimlane.** It keeps the same lanes and
+  left-to-right order, and drops the columns and rows the flow does not use. A
+  gate sits between its neighbouring columns. Edges are routed through free
+  channels, and labels are placed so they do not cover cards or each other.
+- **Step by step** zooms to the step's two boxes and label. When those do not
+  fit at a readable size, it zooms to the target box only. Card text stays at
+  12px or larger on screen.
+- `labelAt` and `via` shape only the Map layout. If the renderer reports a
+  Focus problem for a flow, shorten that flow's labels or split the flow.
 
 ## Gotchas
 
@@ -113,15 +158,31 @@ attribute, taking one screenshot per flow.
   with `labelAt`.
 - **GitHub shows the SVG shrunk to the page width.** It still animates there,
   but the text is too small to read. Recommend opening the file in a browser.
-- **The output has no script.** It animates as a file, inside an `<img>`, and
+- **The SVG has no script.** It animates as a file, inside an `<img>`, and
   on GitHub. With `prefers-reduced-motion`, it shows the static full map.
+- **Test the HTML in WebKit too.** WebKit fonts measure wider than Chrome's
+  headless fallback, and Safari throws after 100 `history.replaceState` calls
+  in 10 seconds (the viewer debounces its URL updates for this reason).
 
 ## Deliver
 
 Tell the user, in this order:
 
-1. How to view it: `open <path>/user-flows.svg` (or the platform's
-   equivalent). It opens at full size; zoom out to fit it to the window.
+1. How to view it:
+   - **SVG:** run `open <path>/user-flows.svg` (or the platform's equivalent).
+     It opens at full size; zoom out to fit it to the window.
+   - **HTML:** run `open <path>/user-flows.html` on a computer.
+   - **HTML on a phone:** open it from a URL. A file preview (iOS Quick Look,
+     for example) may not run JavaScript, and the page then shows only a
+     message. Two ways, and ask before either one, because the map can reveal
+     internal routes and admin pages:
+     - **Same Wi-Fi:** copy only the HTML into an empty folder and serve that
+       folder. `http.server` lists and serves its whole directory, so never
+       start it in the repo, where it would expose `.env` and everything else:
+       `mkdir -p /tmp/flow-map-share && cp user-flows.html /tmp/flow-map-share/ && cd /tmp/flow-map-share && python3 -m http.server 8000 --bind 0.0.0.0`.
+       Open `http://<LAN IP>:8000/user-flows.html` on the phone (on macOS,
+       `ipconfig getifaddr en0` prints the IP). Stop the server with Ctrl-C.
+     - **Hosting:** a private preview deploy or a static host the user picks.
 2. The name: a user flow map drawn as a swimlane diagram, close to a service
    blueprint if it has a System lane.
 3. What it covers: the number of screens and services, the lanes, the user
@@ -132,4 +193,5 @@ Tell the user, in this order:
    features, and stale docs.
 
 If the host can show HTML inline, show the SVG twice: once fitted to the width
-so it animates as a whole, and once at full size in a scrolling box.
+so it animates as a whole, and once at full size in a scrolling box. For the
+HTML viewer, show the phone screenshots from the verifier.

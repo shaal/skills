@@ -100,7 +100,7 @@ Desktop apps that start Claude Code, such as T3 Code, do not read shell aliases.
 | [photoreal-demos](skills/photoreal-demos/SKILL.md) | Builds photoreal, interactive 3D web demos with three.js, Blender Cycles, or both (Blender bakes, three.js renders). Includes a GPU screenshot harness, a Blender 5.2 relight template, an HDR atlas encoder, a relighting viewer, and two complete example scenes. |
 | [grok](skills/grok/SKILL.md) | Asks Grok for a second opinion or an independent review from the shell (`grok -p`), then weighs its answer against Claude's own analysis. No manual copy-paste relay. |
 | [before-after-compare](skills/before-after-compare/SKILL.md) | Captures matched before/after screenshots of each changed UI region with agent-browser, checks they really differ, then builds one self-contained side-by-side HTML page with a one-line explanation per change. |
-| [user-flow-map](skills/user-flow-map/SKILL.md) | Maps every page, action, and user type of a website or repo into one animated swimlane SVG (a user flow map, close to a service blueprint). Each flow plays in turn with numbered steps. Includes a renderer, a Playwright verifier, and an example. |
+| [user-flow-map](skills/user-flow-map/SKILL.md) | Maps every page, action, and user type of a website or repo into a swimlane user flow map (close to a service blueprint). Outputs an animated SVG for GitHub and an interactive HTML viewer for phones: Map or Focus view, step by step, pinch to zoom. Includes a renderer, a Playwright verifier, and an example. |
 
 ### Cost-efficient agent tree
 
@@ -213,15 +213,20 @@ npx skills add shaal/skills --skill user-flow-map --agent claude-code --global
 Then ask, in a repository or with a URL: "map all the user flows of this site as an animated SVG", or "show every action and user type on this app". The agent:
 
 1. Inventories the routes, guards, actions, webhooks, crons, and emails. A live site works too, but only for what a visitor can see.
-2. Writes a small data file and renders it with the bundled `render-flow-map.mjs`.
-3. Checks the result with `verify-flow-map.mjs`: text overflow and label collisions in the fonts a viewer really has, plus one screenshot per flow.
+2. Writes a small data file and renders it with the bundled `render-flow-map.mjs`, once as `.svg` and once as `.html`.
+3. Checks both with `verify-flow-map.mjs`: text overflow and label collisions in the fonts a viewer really has, plus screenshots. For the HTML, it checks every flow and step at phone, sideways phone, tablet, and desktop sizes.
 
-The SVG has one lane per access zone (Public, Members, System, Admin) and one line colour per user type, and each card lists the actions on that page. Flows play one at a time with numbered steps and a moving dot. It has no script, so it animates as a file and on GitHub. With reduced motion, it shows the full map without animation.
+Both outputs have one lane per access zone (Public, Members, System, Admin) and one line colour per user type, and each card lists the actions on that page.
+
+- **SVG:** flows play one at a time with numbered steps and a moving dot. It has no script, so it animates as a file and on GitHub. With reduced motion, it shows the full map without animation.
+- **HTML:** pick a flow, then switch between **Map**, with every box in place, and **Focus**, with only that flow's boxes. On an upright phone, Focus becomes one column in step order. Go **step by step** with swipes or the arrow keys, and pinch, drag, or scroll to zoom. Links can open a specific step. GitHub shows HTML files as source code, so open the file in a browser or host it.
 
 Requirements:
 
 1. Node.js 18 or newer, for the renderer.
-2. Playwright with Chromium, for verification. The agent installs it in a scratch folder, not in your repo, and runs the verifier from there: `mkdir -p /tmp/flow-map-verify && cd /tmp/flow-map-verify && npm i playwright && npx playwright install chromium`. Without Playwright, the agent can run `scripts/checks.js` in any browser tool that runs JavaScript.
+2. Playwright with Chromium and WebKit, for verification. The agent installs it in a scratch folder, not in your repo, and runs the verifier from there: `mkdir -p /tmp/flow-map-verify && cd /tmp/flow-map-verify && npm i playwright && npx playwright install chromium webkit`. Without Playwright, the agent can run `scripts/checks.js` (SVG) or `scripts/viewer-checks.js` (HTML) in any browser tool that runs JavaScript.
+
+To open the HTML viewer on a phone, use a URL, such as a local server on the same Wi-Fi or a private host. A file preview, such as iOS Quick Look, may not run the viewer's JavaScript. For a local server, copy only the HTML into an empty folder and serve that folder, because `python3 -m http.server` lists and serves everything in its directory.
 
 ## Add another skill
 

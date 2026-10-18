@@ -1,9 +1,16 @@
 #!/usr/bin/env node
 /*
- * Verify a user flow map SVG in headless Chromium (Playwright).
+ * Verify a user flow map in headless Chromium (Playwright).
  *
- *   node verify-flow-map.mjs <map.svg> [--out <dir>]
+ *   node verify-flow-map.mjs <map.svg|viewer.html> [--out <dir>] [--browser chromium|webkit|firefox]
  *
+ * Use --browser webkit to check the viewer in Safari's engine (iPhone, iPad, Mac);
+ * install it once with `npx playwright install webkit`.
+ *
+ * For an HTML viewer, see lib/verify-html.mjs: viewer-checks.js at phone,
+ * sideways phone, tablet, and desktop sizes, plus rotation and deep links.
+ *
+ * For an SVG:
  * 1. Runs checks.js with the system UI font and with Inter (must pass), then
  *    with a wide fallback font (warnings only).
  * 2. Scrubs to the moment each flow is fully drawn and saves one screenshot
@@ -25,10 +32,12 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const args = process.argv.slice(2);
-const svgArg = args.find((a) => !a.startsWith('--'));
+const svgArg = args.find((a, i) => !a.startsWith('--') && !['--out', '--browser'].includes(args[i - 1]));
 const outIdx = args.indexOf('--out');
+const browserIdx = args.indexOf('--browser');
+const browserName = browserIdx >= 0 ? args[browserIdx + 1] : 'chromium';
 if (!svgArg) {
-  console.error('Usage: node verify-flow-map.mjs <map.svg> [--out <dir>]');
+  console.error('Usage: node verify-flow-map.mjs <map.svg|viewer.html> [--out <dir>]');
   process.exit(2);
 }
 const svgPath = resolve(svgArg);
@@ -47,8 +56,8 @@ async function loadChromium() {
     for (const name of ['playwright', '@playwright/test', 'playwright-core']) {
       try {
         const mod = await import(pathToFileURL(createRequire(base).resolve(name)).href);
-        const chromium = mod.chromium ?? mod.default?.chromium;
-        if (chromium) return chromium;
+        const type = mod[browserName] ?? mod.default?.[browserName];
+        if (type) return type;
       } catch {
         // try the next candidate
       }
@@ -67,6 +76,15 @@ if (!chromium) {
       'Or load the SVG in any browser tool, evaluate scripts/checks.js, and call flowMapChecks(svg).',
   );
   process.exit(2);
+}
+
+if (svgPath.endsWith('.html')) {
+  mkdirSync(outDir, { recursive: true });
+  const { verifyHtml } = await import('./lib/verify-html.mjs');
+  const errs = await verifyHtml(chromium, svgPath, outDir, here);
+  for (const e of errs) console.log(`ERROR: ${e}`);
+  console.log(errs.length ? `FAILED with ${errs.length} error(s).` : `PASSED. Screenshots in ${outDir}`);
+  process.exit(errs.length ? 1 : 0);
 }
 
 const svgText = readFileSync(svgPath, 'utf8');
