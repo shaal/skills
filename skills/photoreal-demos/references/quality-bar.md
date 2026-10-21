@@ -3,19 +3,28 @@
 ## Before you publish
 
 - [ ] The first frame is a composed, flattering shot. Nothing is waiting behind a click to look good.
-- [ ] Exposure sits right in every state the controls reach: noon and night, calm and storm, every look preset.
+- [ ] Exposure sits right in every state the controls reach: noon and night, calm and storm, every look preset, and both ends of every slider. Screenshot each one: in one demo, a "Candle" preset turned the stone near-black.
 - [ ] Highlights bloom; midtones do not. Text on emissive signs stays legible.
-- [ ] Distant objects fade into the actual horizon color (aerial perspective), with no seam between fog and sky.
+- [ ] Distant objects fade into the actual horizon color (aerial perspective) but keep their macro variation, with no seam between fog and sky.
 - [ ] Contact shadows or AO ground every object. Nothing floats.
 - [ ] The one hero interaction is obvious from the UI and works with mouse, touch and keyboard.
 - [ ] The UI shows real units (°, K, EV, lux, mm/h, Beaufort, m/s, local time).
+- [ ] On desktop, the controls do not cover the subject. Dock them to a side, or collapse them to a slim bar by default. A soft scrim keeps text legible over bright areas.
 - [ ] You screenshot at least two camera angles and two control states, plus a phone view with `shot.py --mobile --w 400 --h 860` (no horizontal overflow).
 - [ ] No `[pageerror]` in the console. fps is measured and adaptive resolution is in place.
 
 ## Failures seen in practice
 
+The first six rows came up again and again in the independent critic reviews of a 33-demo run (refer to [batch.md](batch.md)). Check every look pass against them.
+
 | Symptom | Cause | Fix |
 | --- | --- | --- |
+| Surfaces look procedural: Voronoi cells with even dark edges, zigzag "candy stripe" reflections, identical bricks, cracks or bubbles | One noise at one scale; identical instances | Domain-warp; mix 2–3 octaves at unrelated scales; vary line width and soften edges; randomize per instance |
+| Night frame is 80–90 % near-black | No fill; exposure set only for the light sources | Add what a real photo at that ISO and shutter shows: moonlit sky, airglow, bounce light. Shadows keep detail |
+| Highlights clip to white or shift hue | No cap on emissive luminance; color channels clip one at a time | Cap emissive luminance, and roll saturated highlights smoothly toward white. Only true light sources clip |
+| Lamp pools are hard discs; shadows are hard ellipses with bright rims | Hard light with no falloff or medium | Soften the penumbra with distance; add volume glow in fog and subsurface glow in ice, wax, skin and water |
+| Emissive panels or lit windows look like flat glowing cards | Uniform emission on a flat plane | Add structure (frames, shelves, lamp falloff, silhouettes) and depth (a room behind the glass, reflections); lower the intensity |
+| Far terrain, snow or water turns into one flat tone | Detail and variation fade out with distance | Keep macro variation at every distance, and let aerial perspective carry the depth |
 | Whole frame washes out white or grey | Additive glow or in-scatter without phase normalization | Multiply point-light in-scatter by `σ/(4π)`, clamp near-ray distance, cap the result |
 | Scene far too dark at start | Camera spawned in a hill's or building's shadow facing the light | Search spawn points for an open view toward the light |
 | Exposure wildly off between states | A fixed exposure constant | Meter ambient plus key light, compress (`k / lum^0.8`), clamp, ease over about 0.5 s |
@@ -23,7 +32,6 @@
 | Grass looks like ribbons | Blades too wide and too few | 1–2.5 cm blades, about 250 per m² near the camera, clumping, darker roots |
 | Square glow sprites | Gaussian tail not zero at the sprite edge while night exposure is high | Subtract the edge value and `discard` outside the radius |
 | Particles read as daytime stars | Floating dust too bright away from the sun | Make brightness mostly forward scattering (`pow(dot(V, L), 7)`), with a tiny base |
-| Emissive panels look like flat paper | Uniform emission | Add structure (frames, shelves, lamp falloff, silhouettes) and lower the intensity |
 | Side faces glow | Emissive shading applied to every face of a box | Detect the front face by normal and treat the other faces as body material |
 | Lens drops look like grey discs | Drops tinted or shaded | Offset the UV to show an inverted, squeezed view; only a slightly darker rim |
 | A very bright point turns into a box of bloom | `UnrealBloomPass` on a near-infinite highlight | Clamp the bloom input, or use a 13-tap downsample with tent upsample |
